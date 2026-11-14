@@ -1,5 +1,12 @@
 {
-  "name": "",
+  "name": "Phoenix Protocol",
   "intro": "",
-  "members": []
+  "members": [
+    { "name": "Haroon Abbas Chaudhry" },
+    { "name": "Zayan Muneer" },
+    { "name": "Abdul Subhan" },
+    { "name": "Ibrar Ahmed Sardar" },
+    { "name": "Zaid Ali Sheikh" },
+    { "name": "Shahmeer Abdullah Malik" }
+  ]
 }

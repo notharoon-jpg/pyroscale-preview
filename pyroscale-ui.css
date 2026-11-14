@@ -33,80 +33,6 @@ button.p:hover { background: var(--oxblood); border-color: var(--ac); }
 svg text { font-family: var(--font); }
 [role="region"]:focus-visible { outline-offset: -4px; }
 
-.site-header {
-  padding: 0 clamp(18px, 3.2vw, 56px);
-  background: var(--hd);
-  border-bottom: 1px solid #e2bca454;
-  backdrop-filter: blur(14px);
-  gap: 20px;
-}
-.site-header .brand {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 2px;
-  border: 0;
-  color: var(--cream);
-  font: 700 22px var(--display);
-  letter-spacing: -.025em;
-  white-space: nowrap;
-}
-.brand-ai {
-  padding: 2px 4px;
-  border: 1px solid #c57a69;
-  border-radius: 3px;
-  color: var(--ac);
-  font: 700 10px/1 var(--font);
-  letter-spacing: .045em;
-}
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  margin-right: 2px;
-  flex: none;
-  border: 1px solid #d07566;
-  border-radius: 6px;
-  background: var(--oxblood);
-}
-.brand-mark::after {
-  content: "";
-  width: 9px;
-  height: 12px;
-  border-radius: 72% 14% 67% 63%;
-  background: linear-gradient(140deg, var(--cream) 32%, var(--ac));
-  transform: rotate(22deg);
-}
-.event-name {
-  margin-right: auto;
-  padding-left: 18px;
-  border-left: 1px solid #e2bca438;
-  color: #c9b7ad;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.site-header .header-action {
-  padding: 8px 13px;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  color: var(--ink);
-  font: 600 15px var(--display);
-  font-weight: 600;
-  white-space: nowrap;
-}
-.site-header .header-action:hover {
-  background: var(--oxblood);
-  border-color: var(--ac);
-}
-.site-header #head-explore {
-  background: var(--red);
-  border-color: #ec746d;
-  color: var(--cream);
-}
-.site-header #head-explore:hover { background: var(--oxblood); }
-.site-header #head-explore span { margin-left: 4px; }
-
 .gl.pn {
   background: var(--space);
   border-radius: 0;
@@ -334,16 +260,8 @@ body:not(.dc) .forecast-timeline {
 .forecast-key span:nth-child(2)::before { border-top: 2px dashed var(--ac); }
 .forecast-key span:nth-child(3)::before { border-top: 2px dotted var(--mut); }
 
-@media (max-width: 900px) {
-  .event-name { display: none; }
-}
 @media (max-width: 720px) {
   :root { --hh: 51px; --panel-width: 100%; --panel-height: min(55dvh, 460px); }
-  .site-header { padding: 0 13px; gap: 7px; }
-  .site-header .brand { gap: 7px; font-size: 20px; }
-  .brand-mark { width: 22px; height: 22px; }
-  .site-header .header-action { padding: 6px 8px; font-size: 13px; }
-  .landing #head-explore, body:not(.landing) #head-forecast { display: none; }
   #dr { height: var(--panel-height); }
   .map-ui { --map-right: 10px; --map-left: 10px; --map-bottom: 26px; }
   body:not(.dc) .map-ui { --map-right: 11px; --map-bottom: calc(var(--panel-height) + 24px); }

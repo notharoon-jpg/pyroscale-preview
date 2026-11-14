@@ -9,9 +9,12 @@
   const status = document.getElementById("team-status");
   const teamName = document.getElementById("team-name");
   const teamIntro = document.getElementById("team-description");
+  const title = document.getElementById("team-title");
+  const intro = document.getElementById("team-intro");
   const reset = document.getElementById("reset-team");
   const normalize = (value, length) => typeof value === "string" ? value.trim().slice(0, length) : "";
-  let edited = false;
+  let draft = null;
+  let previewing = false;
 
   function teamFrom(data) {
     const source = Array.isArray(data?.members) ? data.members : [];
@@ -26,10 +29,15 @@
     };
   }
 
-  let team = teamFrom();
-  function render() {
-    document.getElementById("team-title").textContent = team.name || "The people behind PyroScale.";
-    document.getElementById("team-intro").textContent = team.intro || defaultIntro;
+  const defaultProfile = teamFrom({
+    name: title.textContent,
+    intro: intro.textContent,
+    members: Array.from(roster.querySelectorAll("h3"), heading => ({name: heading.textContent}))
+  });
+  let sharedProfile = defaultProfile;
+  function render(team) {
+    title.textContent = team.name || "The people behind PyroScale.";
+    intro.textContent = team.intro || defaultIntro;
     document.getElementById("team-empty").hidden = team.members.length > 0;
     roster.replaceChildren();
     for (const member of team.members) {
@@ -76,6 +84,7 @@
   }
 
   function fillEditor() {
+    const team = draft || sharedProfile;
     teamName.value = team.name;
     teamIntro.value = team.intro;
     fields.replaceChildren();
@@ -101,52 +110,50 @@
   };
   form.onsubmit = event => {
     event.preventDefault();
-    team = readForm();
-    edited = true;
+    draft = readForm();
+    previewing = true;
     reset.hidden = false;
-    render();
+    render(draft);
     try {
-      localStorage.setItem(storageKey, JSON.stringify(team));
+      localStorage.setItem(storageKey, JSON.stringify(draft));
       editor.close();
     } catch {
       status.textContent = "Your details are visible for this visit. Download the team file to keep them.";
     }
   };
 
-  const shared = fetch("team.json").then(response => response.ok ? response.json() : null).catch(() => null);
   try {
-    const draft = localStorage.getItem(storageKey);
-    if (draft) {
-      team = teamFrom(JSON.parse(draft));
-      edited = true;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      draft = teamFrom(JSON.parse(saved));
       reset.hidden = false;
-      render();
     }
   } catch {
     // The shared team profile can still load when browser storage is unavailable.
   }
-  shared.then(data => {
-    if (data && !edited && !editor.open) {
-      team = teamFrom(data);
-      render();
-    }
-  });
+  const shared = fetch("team.json", {cache: "no-cache"})
+    .then(response => response.ok ? response.json() : null)
+    .then(data => {
+      const profile = teamFrom(data);
+      return profile.members.length ? profile : defaultProfile;
+    })
+    .catch(() => defaultProfile)
+    .then(profile => {
+      sharedProfile = profile;
+      if (!previewing) render(sharedProfile);
+    });
   reset.onclick = async () => {
-    const data = await shared;
-    if (!data) {
-      status.textContent = "The shared team profile is unavailable.";
-      return;
-    }
+    await shared;
     try {
       localStorage.removeItem(storageKey);
     } catch {
       status.textContent = "Browser storage is unavailable.";
       return;
     }
-    team = teamFrom(data);
-    edited = false;
+    draft = null;
+    previewing = false;
     reset.hidden = true;
-    render();
+    render(sharedProfile);
     editor.close();
   };
 })();
