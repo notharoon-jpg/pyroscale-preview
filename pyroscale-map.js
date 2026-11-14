@@ -1,3 +1,21 @@
+function setDrawMode(active, focus = false) {
+  if (!G) return;
+  st.gm = active ? "d" : "r";
+  document.querySelector(`input[name="gm"][value="${st.gm}"]`).checked = true;
+  for (const id of ["map-draw", "panel-draw"]) {
+    $(id).setAttribute("aria-pressed", String(active));
+    $(id).textContent = active ? "Stop drawing" : "Draw area";
+  }
+  $("draw-status").hidden = !active;
+  G.renderer.domElement.style.cursor = active ? "crosshair" : "grab";
+  tip.style.display = "none";
+  if (active) {
+    G.fly = null;
+    $("ga").checked = false;
+    if (focus) G.renderer.domElement.focus({preventScroll: true});
+  }
+}
+
 function mapOverview() {
   const layer = st.vm;
   const region = $("pre").value;
@@ -24,7 +42,7 @@ function mapOverview() {
     history = [];
   } else if (layer === "x") {
     history = [];
-    period = SCP.run ? String(SCP.yr) : "";
+    period = SCP.run ? "Projection for " + SCP.yr : "";
     value = SCP.run ? st.fx === "b" ? SCP.Bs : SCP.Ps : null;
     label = st.fx === "b" ? "Annual baseline hotspots" : "Annual scenario hotspots";
     if (SCP.run && st.fx === "c") {
@@ -47,6 +65,11 @@ function mapOverview() {
     `<svg viewBox="0 0 228 40" role="img" aria-label="${layer === "f" ? "Projected monthly hotspot totals" : "Monthly hotspot totals for the last " + values.length + " months of the selection"}"><path d="M0 39H228" fill="none"/>${bars}</svg>` : "";
 }
 
+function setLegendVisible(visible) {
+  $("lgd").hidden = !visible;
+  $("map-legend").setAttribute("aria-pressed", String(visible));
+}
+
 function wireMap() {
   const region = $("map-region"), filters = $("pre");
   region.replaceChildren(...Array.from(filters.options, option => option.cloneNode(true)));
@@ -57,12 +80,12 @@ function wireMap() {
     filters.onchange();
     if (selected === "0") tab("x", true);
   };
-  $("map-details").onclick = () => tab(st.vm === "f" ? "m" : st.vm === "x" ? "f" : "x", true);
-  $("map-legend").onclick = event => {
-    const legend = $("lgd");
-    legend.hidden = !legend.hidden;
-    event.currentTarget.setAttribute("aria-pressed", String(!legend.hidden));
-  };
+  $("map-draw").onclick = $("panel-draw").onclick = () => setDrawMode(st.gm !== "d", true);
+  document.querySelectorAll('input[name="gm"]').forEach(input => {
+    input.onchange = () => setDrawMode(input.value === "d");
+  });
+  $("map-legend").onclick = () => setLegendVisible($("lgd").hidden);
+  $("edit-scenario").onclick = () => tab("f", true);
   const menus = Array.from(document.querySelectorAll(".map-tools > details"));
   for (const menu of menus) {
     menu.addEventListener("toggle", () => {

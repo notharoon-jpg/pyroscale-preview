@@ -1,14 +1,112 @@
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-const HOTSPOT_COLORS = ["#9a3e29", "#ee6b30", "#ffa34e", "#ffd986", "#fff5c0"];
+const HOTSPOT_COLORS = ["#f25045", "#ff7842", "#ffa34e", "#ffcf75", "#fdf0d5"];
 const EARTH_RADIUS = 1;
 const INITIAL_VIEW = {lat: 16, lon: -23};
 const GLOBAL_VIEW_DISTANCE = 3.75;
-const HERO_VIEW_DISTANCE = 3.88;
 const EARTH_CREDIT = "https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/";
 const HD_EARTH_CREDIT = "https://science.nasa.gov/earth/earth-observatory/blue-marble-next-generation/base-topography-bathymetry/";
 
-function heroDistance() {
-  return $("gl").clientWidth <= 720 ? 4.95 : HERO_VIEW_DISTANCE;
+function showHeroEarth() {
+  const canvas = $("hero-planet");
+  const poster = canvas.previousElementSibling;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  const stage = $("hero-stage"), motion = $("hero-motion");
+  const diameter = canvas.width, radius = diameter / 2;
+  const textureWidth = 1024, textureHeight = 512;
+  const image = context.createImageData(diameter, diameter);
+  const surface = [];
+  const latitude = Math.PI / 15;
+  const cos = Math.cos(latitude), sin = Math.sin(latitude);
+  for (let row = 0; row < diameter; row++) {
+    const y = (radius - row - .5) / radius;
+    for (let column = 0; column < diameter; column++) {
+      const x = (column + .5 - radius) / radius;
+      if (x * x + y * y >= 1) continue;
+      const z = Math.sqrt(1 - x * x - y * y);
+      const u = Math.atan2(x, z * cos - y * sin) / (2 * Math.PI);
+      const v = .5 - Math.asin(y * cos + z * sin) / Math.PI;
+      const sunlight = Math.max(0, Math.min(1, (-.85 * x + .43 * y + .3 * z + .065) / .56));
+      const atmosphere = (1 - z) ** 3 * (.18 + .82 * sunlight);
+      surface.push({
+        pixel: (row * diameter + column) * 4,
+        u: Math.floor((u + .5) * textureWidth),
+        row: Math.min(textureHeight - 1, Math.floor(v * textureHeight)) * textureWidth,
+        sunlight: sunlight * sunlight * (3 - 2 * sunlight),
+        atmosphere,
+        alpha: Math.min(1, (1 - Math.hypot(x, y)) * radius) * 255
+      });
+    }
+  }
+  async function texture(file) {
+    const source = new Image();
+    source.src = "assets/" + file;
+    await source.decode();
+    const sample = document.createElement("canvas");
+    sample.width = textureWidth;
+    sample.height = textureHeight;
+    const pixels = sample.getContext("2d", {willReadFrequently: true});
+    pixels.drawImage(source, 0, 0, textureWidth, textureHeight);
+    return pixels.getImageData(0, 0, textureWidth, textureHeight).data;
+  }
+  Promise.all([
+    texture("earth-blue-marble.jpg"),
+    texture("earth-night.jpg").catch(() => new Uint8Array(textureWidth * textureHeight * 4))
+  ]).then(([day, night]) => {
+    let angle = -65, pointer = 0, drift = 0, visible = true, previous = 0, frame = 0;
+    function paint() {
+      const offset = Math.round((angle + drift) / 360 * textureWidth);
+      for (const {pixel, u, row, sunlight, atmosphere, alpha} of surface) {
+        const sample = (row + ((u + offset + textureWidth) % textureWidth)) * 4;
+        const light = .08 + .85 * sunlight, dark = .8 * (1 - sunlight);
+        image.data[pixel] = day[sample] * light + night[sample] * dark + 17 * atmosphere;
+        image.data[pixel + 1] = day[sample + 1] * light + night[sample + 1] * dark + 101 * atmosphere;
+        image.data[pixel + 2] = day[sample + 2] * light + night[sample + 2] * dark + 152 * atmosphere;
+        image.data[pixel + 3] = alpha;
+      }
+      context.putImageData(image, 0, 0);
+    }
+    function animate(time) {
+      frame = 0;
+      if (!visible || stage.parentElement.hidden || reducedMotion.matches || motion.getAttribute("aria-pressed") === "true") return;
+      frame = requestAnimationFrame(animate);
+      const elapsed = time - previous;
+      if (elapsed < 48) return;
+      previous = time;
+      angle = (angle + Math.min(78, elapsed) * .0017) % 360;
+      drift += (pointer - drift) * .22;
+      paint();
+    }
+    function resume() {
+      if (!frame) frame = requestAnimationFrame(animate);
+    }
+    stage.addEventListener("pointermove", event => {
+      if (event.pointerType === "mouse") {
+        const {left, width} = stage.getBoundingClientRect();
+        pointer = ((event.clientX - left) / width - .5) * 22;
+      }
+    });
+    stage.addEventListener("pointerleave", () => { pointer = 0; });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        if (visible) resume();
+      }).observe(stage);
+    } else {
+      new MutationObserver(resume).observe(stage.parentElement, {attributes: true, attributeFilter: ["hidden"]});
+    }
+    motion.addEventListener("click", () => queueMicrotask(resume));
+    reducedMotion.addEventListener("change", resume);
+    paint();
+    canvas.hidden = false;
+    poster.hidden = true;
+    updateMotionButton();
+    resume();
+  }).catch(() => {
+    canvas.hidden = true;
+    poster.hidden = false;
+    updateMotionButton();
+  });
 }
 
 function ll2v(lat, lon, radius) {
@@ -24,21 +122,19 @@ function gResize() {
   if (!G) return;
   const el = $("gl"), w = el.clientWidth, h = el.clientHeight;
   if (!w || !h) return;
-  const landing = document.body.classList.contains("landing");
   const drawer = !document.body.classList.contains("dc");
   const mobile = w <= 720;
   const header = document.querySelector(".site-header").offsetHeight;
   G.renderer.setSize(w, h, false);
   G.camera.aspect = w / h;
   G.camera.fov = 45;
-  G.camera.zoom = mobile ? Math.min(1, w / h * (landing ? 2.05 : drawer ? 1.24 : 1.5)) :
-    drawer && !landing ? Math.min(1, (w - $("dr").offsetWidth) / h * 1.12) : 1;
+  G.camera.zoom = mobile ? Math.min(1, w / h * (drawer ? 1.24 : 1.5)) :
+    drawer ? Math.min(1, (w - $("dr").offsetWidth) / h * 1.12) : 1;
   G.markerUniforms.pixelRatio.value = G.renderer.getPixelRatio();
   G.markerUniforms.viewportHeight.value = h;
-  const x = landing ? (mobile ? 0 : w * .224) : drawer && !mobile ? $("dr").offsetWidth / 2 : 0;
-  const y = landing ? (mobile ? h * .225 : -header / 3) : drawer && mobile ? ($("dr").offsetHeight - header) / 2 : -header / 2;
+  const x = drawer && !mobile ? $("dr").offsetWidth / 2 : 0;
+  const y = drawer && mobile ? ($("dr").offsetHeight - header) / 2 : -header / 2;
   G.camera.setViewOffset(w, h, x, y, w, h);
-  if (landing && !G.fly) G.camera.position.setLength(heroDistance());
 }
 
 function flyTo(lat, lon, distance) {
@@ -73,12 +169,12 @@ function initGlobe() {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(45, 1, .01, 100);
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-    renderer.setClearColor(0x041f29);
+    renderer.setClearColor(0x031522);
     const canvas = renderer.domElement;
     canvas.tabIndex = 0;
     canvas.setAttribute("aria-label", "Earth. Use the arrow keys to rotate, plus or minus to zoom, and Enter to inspect the hotspot nearest the center.");
     el.append(canvas);
-    camera.position.copy(ll2v(INITIAL_VIEW.lat, INITIAL_VIEW.lon, heroDistance()));
+    camera.position.copy(ll2v(INITIAL_VIEW.lat, INITIAL_VIEW.lon, GLOBAL_VIEW_DISTANCE));
     camera.lookAt(0, 0, 0);
 
     const empty = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
@@ -116,14 +212,14 @@ function initGlobe() {
           float lit = smoothstep(-.16, .28, d);
           vec3 dayColor = pow(base, vec3(.83)) * mix(.73, 1.12, smoothstep(-.5, .88, d));
           float gray = dot(dayColor, vec3(.2126, .7152, .0722));
-          dayColor = mix(dayColor, gray * vec3(.86, .97, 1.01), style == 0. ? .57 : .04);
+          dayColor = mix(dayColor, vec3(gray), .04);
           vec3 color = mix(dayColor, mix(base * .15 + cities * .95, dayColor, lit), daylight);
           color *= mix(vec3(1.), vec3(1.13, .9, .78), max(heat, 0.) * .72);
           float limb = pow(1. - max(dot(n, view), 0.), 3.);
           color += vec3(.25, .61, .72) * limb * mix(.5, .22 + .32 * lit, daylight);
           if (style == 1.) {
             float land = 1. - smoothstep(.09, .28, base.b - base.r);
-            float mono = mix(.43 + .24 * gray, .56 + .31 * gray, land);
+            float mono = mix(.27 + .26 * gray, .35 + .37 * gray, land);
             color = vec3(mono * (1. - .19 * limb) * mix(1., .42 + .58 * lit, daylight));
           }
           gl_FragColor = vec4(color, 1.);
@@ -133,8 +229,8 @@ function initGlobe() {
     scene.add(earth);
     const loader = new THREE.TextureLoader();
     const basemap = {
-      style: "mono", base: earthUniforms.day.value, hd: null, sky: null, borders: null,
-      earth: earthUniforms, loader, renderer, scene
+      style: "satellite", base: earthUniforms.day.value, hd: null, sky: null, borders: null,
+      loader, renderer, scene
     };
     for (const [key, file] of [["day", "earth-blue-marble.jpg"], ["night", "earth-night.jpg"]]) {
       loader.load("assets/" + file, texture => {
@@ -183,7 +279,7 @@ function initGlobe() {
     }));
     scene.add(starfield);
 
-    const markerUniforms = {pixelRatio: {value: 1}, viewportHeight: {value: 600}, time: {value: 0}, contrast: {value: 0}};
+    const markerUniforms = {pixelRatio: {value: 1}, viewportHeight: {value: 600}, time: {value: 0}};
     const markers = new THREE.Points(new THREE.BufferGeometry(), new THREE.ShaderMaterial({
       uniforms: markerUniforms,
       transparent: true,
@@ -202,23 +298,23 @@ function initGlobe() {
           alpha = strength * visible;
           color = tint;
           vec4 point = modelViewMatrix * vec4(position, 1.);
-          float pulse = 1. + .075 * sin(time * 1.8 + phase);
-          gl_PointSize = clamp(size * pulse * viewportHeight / -point.z, 3., 42.) * pixelRatio;
+          float pulse = 1. + .045 * sin(time * 1.8 + phase);
+          gl_PointSize = clamp(size * pulse * viewportHeight / -point.z, 6., 42.) * pixelRatio;
           gl_Position = projectionMatrix * point;
         }
       `,
       fragmentShader: `
         varying vec3 color;
         varying float alpha;
-        uniform float contrast;
         void main() {
           float r = length(gl_PointCoord - .5) * 2.;
-          float glow = exp(-r*r * 5.5) * (1. - smoothstep(.72, 1., r));
-          float core = 1. - smoothstep(.04, .33, r);
-          vec3 tint = mix(color, vec3(1., .89, .70), core * .16 * (1. - contrast));
-          float edge = (1. - smoothstep(.32, .44, r)) * contrast;
-          tint = mix(tint, vec3(.13, .08, .08), edge * (1. - core));
-          gl_FragColor = vec4(tint, alpha * min(1., .50 * glow + (.45 + .32 * contrast) * core + edge * .32));
+          float core = 1. - smoothstep(.36, .53, r);
+          float edge = (1. - smoothstep(.52, .72, r)) * (1. - core);
+          float glow = (1. - smoothstep(.52, 1., r)) * (1. - core - edge);
+          float opacity = core + .93 * edge + .25 * glow;
+          vec3 ink = vec3(.08, .023, .025);
+          vec3 tint = (color * (core + .25 * glow) + ink * .93 * edge) / max(opacity, .001);
+          gl_FragColor = vec4(tint, alpha * opacity);
         }
       `
     }));
@@ -246,11 +342,6 @@ function initGlobe() {
     G = {renderer, scene, camera, earth, line, selected, markers, markerUniforms, controls, visible: [], tv: [], fly: null};
     wireGlobeInput(canvas);
     wireBasemap(basemap);
-    let heroVisible = true;
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver(([entry]) => { heroVisible = entry.isIntersecting; });
-      observer.observe($("hero-stage"));
-    }
     let previousTime = 0;
     const up = new THREE.Vector3(0, 1, 0);
     const turn = new THREE.Quaternion(), sun = new THREE.Vector3(), lightOffset = new THREE.Vector3(-.17, .29, 0);
@@ -258,16 +349,14 @@ function initGlobe() {
       requestAnimationFrame(render);
       const delta = Math.min(40, time - previousTime);
       previousTime = time;
-      const landing = document.body.classList.contains("landing");
-      if (landing && !heroVisible) return;
-      const mono = !landing && basemap.style === "mono";
-      const space = !landing && basemap.style === "space";
-      renderer.setClearColor(mono ? 0x37434a : space ? 0x040711 : 0x041f29);
-      earthUniforms.day.value = space && basemap.hd ? basemap.hd : basemap.base;
-      earthUniforms.style.value = mono ? 1 : landing ? 0 : 2;
-      markerUniforms.contrast.value = mono ? 1 : 0;
+      if (document.body.classList.contains("landing")) return;
+      const mono = basemap.style === "mono";
+      const space = basemap.style === "space";
+      renderer.setClearColor(mono ? 0x252b31 : 0x031522);
+      earthUniforms.day.value = !mono && basemap.hd ? basemap.hd : basemap.base;
+      earthUniforms.style.value = mono ? 1 : 0;
       rim.visible = !mono;
-      starfield.visible = space || landing;
+      starfield.visible = space;
       if (basemap.sky) basemap.sky.visible = space;
       if (basemap.borders) basemap.borders.visible = mono;
       const drawing = st.gm === "d";
@@ -279,18 +368,18 @@ function initGlobe() {
           .multiplyScalar(THREE.MathUtils.lerp(flight.fromDistance, flight.distance, eased));
         if (t === 1) G.fly = null;
       }
-      const rotate = landing ? $("hero-motion").getAttribute("aria-pressed") !== "true" : $("ga").checked && !drawing;
+      const rotate = $("ga").checked && !drawing;
       if (!reducedMotion.matches && !flight && rotate) {
         camera.position.applyAxisAngle(up, delta * .000055);
       }
-      const daylight = !landing && $("gn").checked;
+      const daylight = $("gn").checked;
       if (daylight) sun.copy(sunDirection());
       else sun.copy(camera.position).normalize().add(lightOffset).normalize();
       earthUniforms.sun.value.copy(sun);
       earthUniforms.daylight.value = daylight ? 1 : 0;
       earthUniforms.heat.value = st.vm === "x" && SCP.run ? SCP.heat : 0;
       markerUniforms.time.value = reducedMotion.matches ? 0 : time / 1000;
-      controls.enabled = !landing && !drawing;
+      controls.enabled = !drawing;
       controls.update();
       renderer.render(scene, camera);
     }
@@ -301,7 +390,7 @@ function initGlobe() {
     console.warn("3D globe unavailable", error);
     G = null;
     el.innerHTML = '<p class="globe-unavailable">The 3D globe needs WebGL. You can still open the analysis panel to explore the data.</p>';
-    document.querySelectorAll(".map-tools button:not(#map-export):not(#map-legend), .map-settings input, input[name=basemap]").forEach(control => control.disabled = true);
+    document.querySelectorAll(".map-tools button:not(#map-export):not(#map-legend), .map-settings input, input[name=basemap], .draw-shortcut").forEach(control => control.disabled = true);
   }
 }
 
@@ -323,36 +412,38 @@ function wireBasemap(map) {
       resolve(texture);
     }, undefined, reject);
   });
-  let spaceLoad;
-  function loadSpace() {
-    return Promise.allSettled([hd("earth-blue-marble-hd.webp"), hd("milky-way.webp")]).then(([earth, sky]) => {
-      if (earth.status === "fulfilled") map.hd = earth.value;
-      if (sky.status === "fulfilled") {
-        map.sky = new THREE.Mesh(new THREE.SphereGeometry(70, 48, 32), new THREE.MeshBasicMaterial({
-          map: sky.value, color: 0xb2b9cc, side: THREE.BackSide
-        }));
-        map.sky.rotation.set(.3, 1.7, -.35);
-        map.scene.add(map.sky);
-      }
-      return earth.status === "fulfilled" && sky.status === "fulfilled";
-    });
+  let earthLoad, spaceLoad;
+  async function loadEarth() {
+    map.hd = await hd("earth-blue-marble-hd.webp");
   }
-  options.forEach(option => option.addEventListener("change", async () => {
-    map.style = option.value;
-    $("map-ui").dataset.style = map.style;
-    $("map-border-credit").hidden = map.style !== "mono";
+  async function loadSky() {
+    const texture = await hd("milky-way.webp");
+    map.sky = new THREE.Mesh(new THREE.SphereGeometry(70, 48, 32), new THREE.MeshBasicMaterial({
+      map: texture, color: 0xb2b9cc, side: THREE.BackSide
+    }));
+    map.sky.rotation.set(.3, 1.7, -.35);
+    map.scene.add(map.sky);
+  }
+  function updateCredits() {
+    $("map-border-credit").hidden = map.style !== "mono" || !map.borders;
     $("map-space-credit").hidden = map.style !== "space" || !map.sky;
-    $("map-earth-credit").href = map.style === "space" && map.hd ? HD_EARTH_CREDIT : EARTH_CREDIT;
+    $("map-earth-credit").href = map.style !== "mono" && map.hd ? HD_EARTH_CREDIT : EARTH_CREDIT;
+  }
+  async function useStyle(style) {
+    map.style = $("map-ui").dataset.style = style;
+    updateCredits();
     status.textContent = "";
-    if (map.style !== "space") return;
-    if (!spaceLoad) spaceLoad = loadSpace();
-    if (!map.hd || !map.sky) status.textContent = "Loading Space HD…";
-    const complete = await spaceLoad;
-    if (map.style !== "space") return;
-    $("map-earth-credit").href = map.hd ? HD_EARTH_CREDIT : EARTH_CREDIT;
-    $("map-space-credit").hidden = !map.sky;
-    status.textContent = complete ? "" : "Some HD imagery is unavailable. Showing the assets that loaded.";
-  }));
+    if (style === "mono") return;
+    earthLoad ??= loadEarth();
+    if (style === "space") spaceLoad ??= loadSky();
+    if (!map.hd || (style === "space" && !map.sky)) status.textContent = "Loading HD imagery…";
+    const results = await Promise.allSettled(style === "space" ? [earthLoad, spaceLoad] : [earthLoad]);
+    if (map.style !== style) return;
+    updateCredits();
+    status.textContent = results.some(result => result.status === "rejected") ? "Some HD imagery is unavailable." : "";
+  }
+  options.forEach(option => option.addEventListener("change", () => useStyle(option.value)));
+  useStyle(Array.from(options).find(option => option.checked).value);
 
   fetch("assets/country-boundaries.json").then(response => {
     if (!response.ok) throw new Error("Country boundaries unavailable");
@@ -376,6 +467,7 @@ function wireBasemap(map) {
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
     map.borders = new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({color: 0x2c3133, transparent: true, opacity: .72}));
     map.scene.add(map.borders);
+    updateCredits();
   }).catch(() => { $("map-border-credit").hidden = true; });
 }
 
@@ -411,10 +503,11 @@ function wireGlobeInput(canvas) {
   }
   function pickAt(event) {
     const {left, top} = canvas.getBoundingClientRect();
-    return nearest(event.clientX - left, event.clientY - top, event.pointerType === "touch" ? 15 : 9);
+    return nearest(event.clientX - left, event.clientY - top, event.pointerType === "touch" ? 18 : 11);
   }
 
   function adjustArea(bounds) {
+    if (ITEMS.length) clearFocus();
     $("pre").value = "0";
     noFly = true;
     setB(bounds);
@@ -427,10 +520,6 @@ function wireGlobeInput(canvas) {
     draft = null;
     if (area) canvas.setPointerCapture(event.pointerId);
   };
-  document.querySelectorAll('input[name="gm"]').forEach(input => input.addEventListener("change", () => {
-    canvas.style.cursor = st.gm === "d" ? "crosshair" : "grab";
-    tip.style.display = "none";
-  }));
   canvas.onpointermove = event => {
     if (area) {
       const end = coordinates(event);
@@ -453,6 +542,7 @@ function wireGlobeInput(canvas) {
   canvas.onpointerup = event => {
     if (area) {
       adjustArea(draft || [area[0] - 4, area[0] + 4, area[1] - 4, area[1] + 4]);
+      tab("x");
     } else if (start && st.gm !== "d" && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 5) {
       const index = pickAt(event);
       if (index != null) selectCell(index);
@@ -539,8 +629,8 @@ function drawMap() {
     else color.set(ramp(HOTSPOT_COLORS, amount));
     position.push(point.x, point.y, point.z);
     tint.push(color.r, color.g, color.b);
-    strength.push((st.vm === "r" ? [.24, .61, .85, 1][level] : .4 + .6 * scaled) * (main ? 1 : .54));
-    size.push(st.vm === "r" ? [.022, .033, .046, .057][level] : .021 + .037 * scaled);
+    strength.push((st.vm === "r" ? [.48, .76, .92, 1][level] : .73 + .27 * scaled) * (main ? 1 : .46));
+    size.push(st.vm === "r" ? [.029, .041, .054, .065][level] : .03 + .039 * scaled);
     phase.push(index * 1.7);
     G.visible.push({index, point});
   }

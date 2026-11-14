@@ -72,7 +72,6 @@ header button{width:auto;background:transparent;color:#dbe4ef;border:1px solid #
 @media(max-width:720px){header p{display:none}}
 .gl{position:fixed;inset:0;z-index:0;margin:0;border:0;border-radius:0}#gl{position:absolute;inset:0;height:100%}
 .ovs{top:calc(var(--hh) + 10px)}.ov.bot{bottom:calc(10px + env(safe-area-inset-bottom,0px))}
-#yrl{left:10px;bottom:64px;flex-direction:column;align-items:flex-start;gap:2px}
 #dr{position:fixed;top:var(--hh);right:0;bottom:0;width:min(500px,100vw);z-index:4;display:flex;flex-direction:column;background:var(--bg);background:color-mix(in srgb,var(--bg) 93%,transparent);backdrop-filter:blur(16px);border-left:1px solid var(--ln);transition:transform .28s ease}
 body.dc #dr{transform:translateX(105%)}
 #tabs{display:flex;border-bottom:1px solid var(--ln);flex:none}
@@ -98,12 +97,12 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:4px 6px
 h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:720px){.ov{padding:4px 6px;gap:8px;font-size:12px}.ov .seg label{padding:5px 8px}h1{font-size:17px}}
 </style>
-<link rel="stylesheet" href="pyroscale-ui.css">
-<link rel="stylesheet" href="pyroscale-home.css">
-<link rel="stylesheet" href="pyroscale-map.css">
+<link rel="stylesheet" href="pyroscale-ui.css?v=map-refinement">
+<link rel="stylesheet" href="pyroscale-home.css?v=map-refinement">
+<link rel="stylesheet" href="pyroscale-map.css?v=map-refinement">
 </head><body class="landing dc">
 <div class="pn gl"><div id="gl" role="region" aria-label="Interactive 3D globe of hotspot activity"></div>
-<div class="map-ui" id="map-ui" data-style="mono" hidden>
+<div class="map-ui" id="map-ui" data-style="satellite" hidden>
   <div class="map-top">
     <div class="map-filterbar">
       <div class="map-place-search">
@@ -126,18 +125,29 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
         <label><input type="radio" name="fx" value="b">Baseline</label>
         <label><input type="radio" name="fx" value="c">Change</label>
       </div>
+      <div class="scenario-context">
+        <button id="edit-scenario" type="button" aria-controls="dr">Scenario settings <span aria-hidden="true">↗</span></button>
+        <p id="scenario-map-year" hidden></p>
+      </div>
     </div>
     <div class="ov" id="fcl" hidden></div>
+    <p id="map-style-status" class="map-notice" role="status"></p>
+    <div class="map-draw-row">
+      <button id="map-draw" class="draw-shortcut" type="button" aria-pressed="false" aria-describedby="map-draw-help">Draw area</button>
+      <span id="map-draw-help" class="sr-only">Draw a box on the globe to analyze hotspots in that area.</span>
+      <p id="draw-status" class="map-notice draw-notice" role="status" hidden>Drag on the globe to select an area, or tap to select a small box.</p>
+    </div>
   </div>
   <section class="map-overview" aria-labelledby="map-overview-title">
-    <div>
+    <div class="map-overview-meta">
       <h2 id="map-overview-title">Global</h2>
       <p id="map-overview-period"></p>
+    </div>
+    <div class="map-overview-total">
       <strong id="map-overview-value">–</strong>
       <p id="map-overview-measure"></p>
-      <div id="map-overview-chart"></div>
     </div>
-    <button id="map-details" type="button">More details <span aria-hidden="true">↗</span></button>
+    <div id="map-overview-chart"></div>
   </section>
   <div class="forecast-timeline" id="fkl" role="group" aria-label="Forecast timeline" hidden>
     <button id="forecast-play" type="button" aria-label="Play forecast months" title="Play forecast months"><span aria-hidden="true">▶</span></button>
@@ -154,11 +164,10 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
       <div>
         <fieldset>
           <legend>Globe style</legend>
-          <label><input type="radio" name="basemap" value="mono" checked><span><strong>Monochrome</strong><small>Country borders and colored hotspots</small></span></label>
-          <label><input type="radio" name="basemap" value="satellite"><span><strong>Satellite</strong><small>Natural-color Earth imagery</small></span></label>
+          <label><input type="radio" name="basemap" value="satellite" checked><span><strong>Standard HD</strong><small>Natural-color Earth imagery</small></span></label>
           <label><input type="radio" name="basemap" value="space"><span><strong>Space HD</strong><small>High-resolution Earth and the Milky Way</small></span></label>
+          <label><input type="radio" name="basemap" value="mono"><span><strong>Monochrome</strong><small>Country borders and colored hotspots</small></span></label>
         </fieldset>
-        <p id="map-style-status" role="status"></p>
       </div>
     </details>
     <button id="map-legend" type="button" aria-controls="lgd" aria-pressed="true">Legend</button>
@@ -178,7 +187,10 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
       </div>
     </details>
   </div>
-  <div class="ov bot" id="lgd"></div><div class="ov" id="yrl" hidden></div>
+  <section class="ov bot" id="lgd" aria-labelledby="legend-title">
+    <h2 id="legend-title">Map legend</h2>
+    <div id="legend-content"></div>
+  </section>
   <span class="demo-status" id="demo-status">Demonstration data</span>
   <div class="map-credit">
     <a id="map-earth-credit" href="https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/" target="_blank" rel="noopener">NASA Earth Observatory</a>
@@ -188,8 +200,8 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
 </div></div>
 
 <header class="site-header">
-  <button class="brand" id="home" type="button" aria-label="PyroScale-AI home"><span class="brand-mark" aria-hidden="true"></span><span>PyroScale<span class="brand-ai"> AI</span></span></button>
-  <span class="event-name">NASA Space Apps Challenge</span>
+  <button class="brand" id="home" type="button" aria-label="PyroScale-AI home"><span class="brand-mark" aria-hidden="true"></span><span>PyroScale</span><span class="brand-ai">AI</span></button>
+  <span class="event-name">NASA Space Apps Challenge project</span>
   <div class="hr">
     <nav class="home-nav" aria-label="Homepage">
       <a href="#mission">Our mission</a>
@@ -197,17 +209,21 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
     </nav>
     <button class="header-action" id="head-forecast" type="button">Forecast &amp; model</button>
     <button class="header-action" id="head-explore" type="button">Explore globe <span aria-hidden="true">↗</span></button>
-    <button class="header-action" id="dt" type="button" aria-controls="dr" aria-expanded="false" hidden>Open analysis</button>
+    <button class="header-action" id="dt" type="button" aria-controls="dr" aria-expanded="false" hidden><span class="analysis-icon" aria-hidden="true"></span><span>Analysis</span></button>
   </div>
 </header>
 
 <main id="landing" class="landing-screen">
   <section class="hero-stage" id="hero-stage" aria-labelledby="hero-title">
+    <div class="hero-earth" aria-hidden="true">
+      <img src="assets/earth-landing-fallback.jpg" width="960" height="960" alt="" decoding="async" fetchpriority="high">
+      <canvas id="hero-planet" width="432" height="432" hidden></canvas>
+    </div>
     <div class="home-width hero-layout">
       <div class="intro">
         <span class="mobile-event">NASA Space Apps Challenge</span>
-        <h1 id="hero-title" tabindex="-1">Understand your <span>fire season.</span></h1>
-        <p>See how fire activity changes in the places you care about. Explore NASA satellite observations, compare past seasons, and see what monthly forecasts suggest for your region.</p>
+        <h1 id="hero-title" tabindex="-1">Understand your <em>fire season.</em></h1>
+        <p>See more than two decades of fire activity from NASA satellites. Compare past seasons and explore what monthly forecasts suggest for the places you care about.</p>
         <div class="intro-actions">
           <button class="launch" id="launch" type="button">Explore the globe <span aria-hidden="true">↗</span></button>
           <a class="intro-link" href="#mission">Read our mission <span aria-hidden="true">↓</span></a>
@@ -220,8 +236,9 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
           <div><dt>Satellite instruments</dt><dd>MODIS + VIIRS</dd></div>
         </dl>
         <div class="landing-credit">
-          <a href="https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/" target="_blank" rel="noopener">NASA Blue Marble imagery</a>
-          <button id="hero-motion" type="button" aria-pressed="false">Pause rotation</button>
+          <a href="https://science.nasa.gov/earth/earth-observatory/the-blue-marble-true-color-global-imagery-at-1km-resolution/" target="_blank" rel="noopener">NASA Earth imagery</a>
+          <a href="https://www.eso.org/public/images/eso0932a/" target="_blank" rel="noopener">ESO/S. Brunier sky imagery</a>
+          <button id="hero-motion" type="button" aria-pressed="false" hidden>Pause globe animation</button>
         </div>
       </div>
     </div>
@@ -236,8 +253,11 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
         <p>PyroScale-AI brings NASA satellite observations into one comparable record. Residents, educators, and local groups can explore their region’s fire seasons, see what the model projects, and check how much uncertainty comes with those projections.</p>
       </div>
       <figure class="mission-image">
-        <img src="https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/151000/151430/quebecfires_amo_2023154_lrg.jpg" loading="lazy" decoding="async" alt="Satellite view of smoke plumes rising from wildfires across Quebec.">
-        <figcaption><span>Wildfire smoke over Quebec · June 2023</span><a href="https://science.nasa.gov/earth/earth-observatory/fires-burn-across-quebec-151430/" target="_blank" rel="noopener">NASA Earth Observatory ↗</a></figcaption>
+        <div class="sensor-images">
+          <div><strong>Aqua MODIS <small>1 km</small></strong><img src="assets/nasa-modis-hotspots.jpg" width="720" height="480" loading="lazy" decoding="async" alt="MODIS image showing fire detections across northeast China."></div>
+          <div><strong>Suomi NPP VIIRS <small>375 m</small></strong><img src="assets/nasa-viirs-hotspots.jpg" width="720" height="480" loading="lazy" decoding="async" alt="VIIRS image of the same area with more detailed fire detections."></div>
+        </div>
+        <figcaption><span>Red marks show active fire detections in northeast China, Nov 6, 2015. The labels give each sensor’s hotspot detection resolution.</span><a href="https://science.nasa.gov/earth/earth-observatory/a-clearer-view-of-fire-87111/" target="_blank" rel="noopener">NASA Earth Observatory ↗</a></figcaption>
       </figure>
     </div>
   </section>
@@ -303,6 +323,23 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
   </footer>
 </main>
 
+<dialog id="globe-picker" aria-labelledby="globe-picker-title">
+  <form method="dialog">
+    <h2 id="globe-picker-title">Choose your globe view</h2>
+    <p>You can change this later using Globe style on the map.</p>
+    <fieldset class="globe-choices">
+      <legend class="sr-only">Globe view</legend>
+      <label><input type="radio" name="launch-style" value="satellite" checked autofocus><span class="globe-option globe-standard"><strong>Standard HD</strong><small>Natural-color Earth · Default</small></span></label>
+      <label><input type="radio" name="launch-style" value="space"><span class="globe-option globe-space"><strong>Space HD</strong><small>Natural-color Earth with the Milky Way</small></span></label>
+      <label><input type="radio" name="launch-style" value="mono"><span class="globe-option globe-mono"><strong>Monochrome</strong><small>Grayscale Earth and colored hotspots</small></span></label>
+    </fieldset>
+    <div class="picker-actions">
+      <button type="button" id="cancel-globe">Back</button>
+      <button class="p" type="submit">Open globe <span aria-hidden="true">↗</span></button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="team-editor" class="team-editor" aria-labelledby="team-editor-title">
   <form id="team-form">
     <h2 id="team-editor-title">Edit team details</h2>
@@ -341,13 +378,17 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
   <div class="tp" data-t="x"><div class="wrap">
 <div>
 <div class="pn"><h2>Area of interest</h2>
+<div class="area-shortcut">
+  <button id="panel-draw" class="draw-shortcut" type="button" aria-pressed="false" aria-describedby="panel-draw-help">Draw area</button>
+  <p id="panel-draw-help">Drag a box on the globe to analyze that area, or tap the globe for a small box. Charts update when you finish.</p>
+</div>
 <label for="pre">Region</label><select id="pre"></select>
 <div class="g2">
 <div><label for="n">North latitude</label><input id="n" type="number" step="0.5"></div>
 <div><label for="s">South latitude</label><input id="s" type="number" step="0.5"></div>
 <div><label for="w">West longitude</label><input id="w" type="number" step="0.5"></div>
 <div><label for="e">East longitude</label><input id="e" type="number" step="0.5"></div></div>
-<p class="hint">On the globe, switch to Draw area and drag, or click once for a small box. You can also pick a region or type coordinates.</p></div>
+<p class="hint">You can also pick a region or type coordinates.</p></div>
 <div class="pn"><h2>Period and view</h2>
 <div class="g2"><div><label for="f">From</label><input id="f" type="month" value="2001-01" min="2001-01" max="2026-10"></div>
 <div><label for="t">To</label><input id="t" type="month" value="2026-10" min="2001-01" max="2026-10"></div></div>
@@ -432,7 +473,7 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
 <div class="lv"><label for="l2">Rainfall change <b id="v2">0%</b></label><input type="range" id="l2" min="-30" max="30" step="5" value="0"></div>
 <div class="lv"><label for="l3">Human burning and ignitions <b id="v3">0%</b></label><input type="range" id="l3" min="-80" max="50" step="5" value="0"></div>
 <div class="lv"><label for="l4">Fuel management and suppression <b id="v4">0%</b></label><input type="range" id="l4" min="0" max="50" step="5" value="0"></div>
-<div class="lv"><label for="l5">Year <b id="v5">2040</b></label><input type="range" id="l5" min="2027" max="2060" step="1" value="2040"></div>
+<div class="lv"><label for="l5">Target year <b id="v5">2040</b></label><input type="range" id="l5" min="2027" max="2060" step="1" value="2040" aria-describedby="scenario-year-help"><p class="note" id="scenario-year-help">2040 is the default horizon for this what-if scenario. Change the target year, then run the scenario to compare it with the baseline.</p></div>
 <label class="ck"><input type="checkbox" id="lsw">Apply to the whole world, not just my selected area</label>
 <details><summary>Assumptions</summary><div class="g2"><div><label for="a1">Change in fire activity per +1 °C (%)</label><input id="a1" type="number" value="15" step="1"></div><div><label for="a2">Change per 10% less rainfall (%)</label><input id="a2" type="number" value="8" step="1"></div></div><p class="note">These are placeholders for illustration, not measured values. Replace them with figures from studies you trust. Where the ML forecast has no edge over the seasonal pattern, the current path falls back to each cell’s last five full years, extended by its own 10-year trend.</p></details>
 <div class="row" style="justify-content:flex-start;margin-top:10px"><button class="p" id="sr">Run scenario</button><button id="sx">Reset</button></div>
@@ -450,11 +491,11 @@ h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;tex
 <textarea id="ta" readonly aria-label="Export preview"></textarea>
 <p class="note" id="export-status" role="status"></p>
 <div class="row"><button id="cp">Copy</button><button id="dl">Download</button><button class="p" id="cl">Close</button></div></dialog>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="pyroscale-globe.js"></script>
+<script src="assets/vendor/three-r128/three.min.js"></script>
+<script src="assets/vendor/three-r128/OrbitControls.js"></script>
+<script src="pyroscale-globe.js?v=graphics-2"></script>
 <script src="pyroscale-export.js"></script>
-<script src="pyroscale-map.js"></script>
+<script src="pyroscale-map.js?v=map-refinement"></script>
 <script src="pyroscale-team.js" defer></script>
 <script>
 const $=id=>document.getElementById(id),MN="Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
@@ -508,13 +549,13 @@ const X=m=>l+(m+.5)*(W-l-r)/12,Y=v=>H-b-v/(mx*1.1)*(H-b-t);let h=`<svg viewBox="
 med.forEach((v,m)=>h+=`<rect x="${X(m)-9}" y="${Y(v)}" width="18" height="${H-b-Y(v)}" fill="var(--bar)"/><text x="${X(m)}" y="${H-8}" text-anchor="middle">${MN[m][0]}</text>`);
 const pts=cv.map((v,m)=>v==v?[X(m),Y(v)]:null).filter(Boolean);
 h+=`<polyline points="${pts.join(" ")}" fill="none" stroke="var(--ac)" stroke-width="2"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.6" fill="var(--ac)"/>`).join("");
-$("sn").textContent=`Gray bars: full-record median. Blue line: ${st.cmp}${st.cmp==Y1?" (through "+MN[LAST%12]+")":""}.`;return h+"</svg>"}
+$("sn").textContent=`Gray bars: full-record median. Solid line: ${st.cmp}${st.cmp==Y1?" (through "+MN[LAST%12]+")":""}.`;return h+"</svg>"}
 function ann(){const W=360,H=210,l=40,b=22,t=8,r=8,n=NY-1,sum=a=>Array.from({length:n},(_,y)=>{let s=0;for(let m=0;m<12;m++)s+=a[y*12+m];return s}),R=sum(A.R),Hm=sum(A.H),mx=Math.max(...R,...Hm,1);
 const X=y=>l+y*(W-l-r)/(n-1),Y=v=>H-b-v/(mx*1.1)*(H-b-t),pl=(a,s)=>`<polyline points="${a.map((v,y)=>[X(y),Y(v)])}" fill="none" ${s}/>`;
 let h=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Annual hotspot totals, raw and harmonized">`+axes(W,H,l,b,t,r,mx);
 for(let y=0;y<n;y+=5)h+=`<text x="${X(y)}" y="${H-8}" text-anchor="middle">${Y0+y}</text>`;
 h+=`<line x1="${X(11)}" x2="${X(11)}" y1="${t}" y2="${H-b}" stroke="var(--mut)" stroke-dasharray="3 3"/><text x="${X(11)+4}" y="${t+9}">VIIRS from 2012</text>`+pl(R,'stroke="var(--mut)" stroke-width="1.8" stroke-dasharray="5 3"')+pl(Hm,'stroke="var(--ac)" stroke-width="2.2"');
-h+=`<text x="${l+6}" y="${H-b-6}" style="fill:var(--mut)">Dashed gray: raw. Solid blue: harmonized.</text>`;return h+"</svg>"}
+h+=`<text x="${l+6}" y="${H-b-6}" style="fill:var(--mut)">Dashed gray: raw. Solid line: harmonized.</text>`;return h+"</svg>"}
 function alerts(){const L=[];for(let i=Math.min(st.t,LAST),k=0;k<12&&i>=st.f;k++,i--){const a=med[i%12]?(S[i]/med[i%12]-1)*100:0;if(a>=150)L.push([i,a])}
 $("al").innerHTML=L.length?L.map(([i,a])=>`<li><span><b>${MN[i%12]} ${Y0+(i/12|0)}</b> at ${S[i].toLocaleString()} hotspots</span><span>+${Math.round(a)}% vs median</span></li>`).join(""):`<li>No month in the last 12 exceeds 150% of its median.</li>`}
 function landTex(){const c=document.createElement("canvas");c.width=2048;c.height=1024;const g=c.getContext("2d"),X=lo=>(lo+180)/360*2048,Y=la=>(90-la)/180*1024,gr=g.createLinearGradient(0,0,0,1024);
@@ -683,11 +724,13 @@ $("cx").onclick=()=>{st.sel=-1;showCell();drawMap()};$("cu").onclick=()=>{$("pre
 $("cq").onclick=()=>{tab("d");$("aiq").value="Analyze the point at "+cn(c)+": how active is it, how risky is it this month, and how does it compare with the rest of my selected area?";$("aiq").focus()};
 geo(c.lat,c.lon).then(n=>{const p=$("point-place");if(p&&cells[st.sel]===c)p.textContent=n?"Near "+n:"Place name unavailable here"})}
 function legend(upper) {
-  const box = $("lgd"), scenario = st.vm === "x", change = scenario && st.fx === "c";
+  const content = $("legend-content"), scenario = st.vm === "x", change = scenario && st.fx === "c";
   $("fkl").hidden = st.vm !== "f";
   if ($("fkl").hidden) stopForecast();
   $("fxl").hidden = !scenario;
-  $("yrl").hidden = !(scenario && SCP.run);
+  const scenarioYear = $("scenario-map-year");
+  scenarioYear.hidden = !SCP.run;
+  if (scenario && SCP.run) scenarioYear.textContent = `Showing ${SCP.yr} · What-if projection`;
   mapOverview();
   const month = mname(FS + st.fk - 1);
   $("fkv").textContent = month;
@@ -696,22 +739,19 @@ function legend(upper) {
   $("timeline-start").textContent = mname(FS);
   $("timeline-end").textContent = mname(FS + FH - 1);
   if (st.vm === "r") {
-    box.innerHTML = `<strong>Activity vs. usual · ${mname(FS)}</strong><div class="risk-scale">` +
+    content.innerHTML = `<strong>Activity vs. usual · ${mname(FS)}</strong><div class="risk-scale">` +
       LV.map((name, i) => `<span><i style="background:${RCOL[i]}"></i>${name}</span>`).join("") + "</div>";
     return;
   }
   if (scenario && !SCP.run) {
-    box.textContent = "Run a scenario to map the results.";
+    content.textContent = "Run a scenario to map the results.";
     return;
   }
-  if (scenario) {
-    $("yrl").innerHTML = `<strong>${SCP.yr}</strong><span>${st.fx === "b" ? "Baseline" : sgn((SCP.Ps/(SCP.Bs||1)-1)*100) + " in scope"}</span>`;
-  }
-  const title = change ? "Change from baseline" : scenario ? "Projected monthly hotspots" :
+  const title = change ? "Change from baseline" : scenario ? (st.fx === "b" ? "Baseline monthly hotspots" : "Scenario monthly hotspots") :
     st.vm === "f" ? "Forecast hotspots" : "Mean monthly hotspots";
-  box.innerHTML = `<strong>${change ? title : title + " per cell"}</strong><div class="scale-track">
+  content.innerHTML = `<strong>${change ? title : title + " per cell"}</strong><div class="scale-track">
     <i class="legend-scale" style="--scale-colors:${change ? DV : HOTSPOT_COLORS}"></i>
-    <div class="legend-ends"><span>${change ? "−100%" : "0"}</span><span>${change ? "+100%" : upper == null ? "High" : fmt(upper) + "+"}</span></div></div>`;
+    <div class="legend-ends"><span>${change ? "−100%" : "0"}</span>${change ? "<span>0%</span>" : ""}<span>${change ? "+100%" : upper == null ? "High" : fmt(upper) + "+"}</span></div></div>`;
 }
 let forecastTimer = null;
 const forecastPlay = $("forecast-play");
@@ -771,6 +811,29 @@ const LY=[["hm","Hotspots, harmonized (mean per month)",c=>c.mu,"Hotspots"],["hr
 /* ---- tabs and drawer ---- */
 const PANEL_TITLES = {x:"Area analysis", m:"Forecast & model", c:"Find a place", p:"Hotspot details", d:"Data Lab", f:"Scenario lab"};
 let activePanel = "x";
+const globePicker = $("globe-picker");
+let afterGlobeChoice;
+let globeStarted = false;
+function withGlobe(action) {
+  if (globeStarted) {
+    action();
+    return;
+  }
+  afterGlobeChoice = action;
+  if (!globePicker.open) globePicker.showModal();
+}
+globePicker.querySelector("form").addEventListener("submit", event => {
+  event.preventDefault();
+  const style = globePicker.querySelector('input[name="launch-style"]:checked').value;
+  document.querySelector(`input[name="basemap"][value="${style}"]`).checked = true;
+  globePicker.close();
+  globeStarted = true;
+  initGlobe();
+  if (G) drawMap();
+  afterGlobeChoice();
+});
+$("cancel-globe").onclick = () => globePicker.close();
+
 function updatePanelRegion() {
   $("panel-region").textContent = ITEMS.length ? ITEMS.map(item => item.name).join(", ") :
     PRE[Number($("pre").value)]?.[0] || "Custom area";
@@ -778,7 +841,6 @@ function updatePanelRegion() {
 function drawer(open, focus = false) {
   document.body.classList.toggle("dc", !open);
   $("dr").inert = !open;
-  $("dt").textContent = open ? "Close analysis" : "Open analysis";
   $("dt").setAttribute("aria-expanded", String(open));
   gResize();
   if (focus) (open ? document.querySelector("#tabs .on") : $("dt")).focus();
@@ -801,10 +863,14 @@ function tab(name, focus = false) {
   drawer(true, focus);
 }
 function enterGlobe(panel) {
+  withGlobe(() => showGlobe(panel));
+}
+function showGlobe(panel) {
   const first = document.body.classList.contains("landing");
   if (first) {
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
     window.scrollTo(0, 0);
+    setLegendVisible(true);
   }
   document.body.classList.remove("landing");
   $("landing").hidden = true;
@@ -812,6 +878,7 @@ function enterGlobe(panel) {
   $("head-explore").hidden = true;
   $("dt").hidden = false;
   if (G) G.renderer.domElement.tabIndex = 0;
+  gResize();
   if (panel === "m") {
     const forecast = document.querySelector('input[name="vm"][value="f"]');
     forecast.checked = true;
@@ -838,13 +905,13 @@ function showLanding() {
   $("head-explore").hidden = false;
   $("dt").hidden = true;
   $("ga").checked = false;
+  setDrawMode(false);
   tip.style.display = "none";
   if (G) G.renderer.domElement.tabIndex = -1;
   const observed = document.querySelector('input[name="vm"][value="o"]');
   observed.checked = true;
   observed.onchange();
   gResize();
-  flyTo(INITIAL_VIEW.lat, INITIAL_VIEW.lon, heroDistance());
   $("hero-title").focus({preventScroll:true});
 }
 document.querySelectorAll("#tabs button").forEach(button => {
@@ -862,17 +929,21 @@ $("head-explore").onclick = $("launch").onclick = () => enterGlobe();
 $("forecast-link").onclick = $("head-forecast").onclick = () => enterGlobe("m");
 $("home").onclick = showLanding;
 $("home-calendar").onclick = () => {
-  enterGlobe("x");
-  $("ct").scrollIntoView({block:"start"});
-  $("ct").focus({preventScroll:true});
+  withGlobe(() => {
+    showGlobe("x");
+    $("ct").scrollIntoView({block:"start"});
+    $("ct").focus({preventScroll:true});
+  });
 };
 $("home-places").onclick = () => {
-  enterGlobe("c");
-  $("pq").focus();
+  withGlobe(() => {
+    showGlobe("c");
+    $("pq").focus();
+  });
 };
 const motionButton = $("hero-motion");
 function updateMotionButton() {
-  motionButton.hidden = reducedMotion.matches || !G;
+  motionButton.hidden = reducedMotion.matches || $("hero-planet").hidden;
 }
 motionButton.onclick = () => {
   const paused = motionButton.getAttribute("aria-pressed") === "true";
@@ -880,7 +951,8 @@ motionButton.onclick = () => {
 };
 reducedMotion.addEventListener("change", updateMotionButton);
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && !$("dx").open && !document.body.classList.contains("dc")) drawer(false, true);
+  if (event.key === "Escape" && !$("dx").open && !globePicker.open &&
+      !document.body.classList.contains("landing") && !document.body.classList.contains("dc")) drawer(false, true);
 });
 /* ---- Data Lab ---- */
 const pc=(a,b)=>{let n=0,sx=0,sy=0;for(let i=0;i<a.length;i++)if(Number.isFinite(a[i])&&Number.isFinite(b[i])){n++;sx+=a[i];sy+=b[i]}if(n<8)return NaN;const mx=sx/n,my=sy/n;let u=0,p=0,q=0;for(let i=0;i<a.length;i++)if(Number.isFinite(a[i])&&Number.isFinite(b[i])){const x=a[i]-mx,y=b[i]-my;u+=x*y;p+=x*x;q+=y*y}return p&&q?u/Math.sqrt(p*q):NaN};
@@ -1057,9 +1129,8 @@ $("pfl").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const t=a
 
 wireMap();
 wireExport();
-initGlobe();
 updateMotionButton();
-if (G) G.renderer.domElement.tabIndex = -1;
+showHeroEarth();
 attachFC(demoFC());
 noFly = true;
 setB(st.b);
