@@ -56,7 +56,7 @@ svg text { font-family: var(--font); }
   --map-right: 18px;
   --map-bottom: 28px;
 }
-body:not(.dc) .map-ui { --map-right: calc(var(--panel-width) + 18px); }
+body:not(.dc, .analysis-floating) .map-ui { --map-right: calc(var(--panel-width) + 18px); }
 .map-ui .ov {
   color: var(--ink);
   background: var(--sf);
@@ -99,7 +99,7 @@ body .map-ui .ovs { top: calc(var(--hh) + 16px); left: var(--map-left); max-widt
   border-radius: 3px;
   font: 500 13px var(--display);
 }
-body:not(.dc) .forecast-timeline {
+body:not(.dc, .analysis-floating) .forecast-timeline {
   left: calc((100% - var(--panel-width)) / 2);
   width: min(55vw, calc(100% - var(--panel-width) - 116px), 680px);
 }
@@ -264,16 +264,16 @@ body:not(.dc) .forecast-timeline {
   :root { --hh: 51px; --panel-width: 100%; --panel-height: min(55dvh, 460px); }
   #dr { height: var(--panel-height); }
   .map-ui { --map-right: 10px; --map-left: 10px; --map-bottom: 26px; }
-  body:not(.dc) .map-ui { --map-right: 11px; --map-bottom: calc(var(--panel-height) + 24px); }
+  body:not(.dc, .analysis-floating) .map-ui { --map-right: 11px; --map-bottom: calc(var(--panel-height) + 24px); }
   body .map-ui .ovs { top: calc(var(--hh) + 9px); }
   .map-ui .seg label { padding: 6px 9px; }
   #lgd { top: auto; bottom: calc(var(--map-bottom) + 110px); transform: none; max-width: 90px; }
   #lgd .legend-scale { height: 53px; }
   .map-ui .map-tools { bottom: calc(var(--map-bottom) + 66px); }
-  .forecast-timeline, body:not(.dc) .forecast-timeline { left: 50%; width: calc(100% - 20px); }
+  .forecast-timeline, body:not(.dc, .analysis-floating) .forecast-timeline { left: 50%; width: calc(100% - 20px); }
 }
 @media (min-width: 721px) and (max-width: 1200px) {
-  body:not(.dc) .map-ui .map-tools { bottom: calc(var(--map-bottom) + 68px); }
+  body:not(.dc, .analysis-floating) .map-ui .map-tools { bottom: calc(var(--map-bottom) + 68px); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }

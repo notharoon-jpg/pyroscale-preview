@@ -411,7 +411,7 @@ ${lv?`<h2 style="margin:14px 0 6px">Selected datasets for this cell</h2><table><
 ${st.dm==="h"&&c.backcastLo?.some(Number.isFinite)?'<details><summary>Experimental history intervals</summary><ul>'+c.backcastLo.map((v,i)=>Number.isFinite(v)&&i>=st.f&&i<=st.t?`<li>${ym(i)} · ${fmt(c.h[i])} estimated detections (${fmt(v)}–${fmt(c.backcastHi[i])})</li>`:"").join("")+"</ul></details>":""}
 <div class="row" style="justify-content:flex-start"><button class="p" id="cu">Use this cell as my area</button><button id="cq">Ask the analyst about it</button></div>`;
 $("cx").onclick=()=>{st.sel=-1;showCell();drawMap()};$("cu").onclick=()=>{$("pre").value="0";setB([c.lat-1.5,c.lat+1.5,c.lon-1.5,c.lon+1.5])};
-$("cq").onclick=()=>{tab("d");$("aiq").value="Analyze the point at "+cn(c)+": how active is it, how does the outlook compare with its usual season, and how does it compare with the rest of my selected area?";$("aiq").focus()};
+$("cq").onclick=()=>{tab("d");$("aiq").closest("details").open=true;$("aiq").value="Analyze the point at "+cn(c)+": how active is it, how does the outlook compare with its usual season, and how does it compare with the rest of my selected area?";$("aiq").focus()};
 const area=Object.entries(c.cc).sort((a,b)=>b[1]-a[1]).slice(0,4);
 $("point-place").textContent=area.length?area.map(([code,weight])=>(CN[code]||code)+" "+Math.round(weight*100)+"%").join(" · ")+" of cell area":"Unassigned cell area";}
 function legend(upper) {
@@ -524,6 +524,8 @@ const LY=[["hm","NOAA-20 detections (mean per month)",c=>c.mu,"Hotspots"],["hr",
 /* ---- tabs and drawer ---- */
 const PANEL_TITLES = {x:"Area analysis", m:"Forecast & model", c:"Find a place", p:"Hotspot details", d:"Data Lab", f:"Scenario lab"};
 let activePanel = "x";
+const analysisTools = $("analysis-tools");
+const analysisToolsTrigger = analysisTools.querySelector("summary");
 const globePicker = $("globe-picker");
 globePicker.querySelector("form").addEventListener("submit", event => {
   event.preventDefault();
@@ -560,7 +562,12 @@ function drawer(open, focus = false) {
   $("dr").inert = !open;
   $("dt").setAttribute("aria-expanded", String(open));
   gResize();
-  if (focus) (open ? document.querySelector("#tabs .on") : $("dt")).focus();
+  if (!open) analysisTools.open = false;
+  if (focus) {
+    const selected = document.querySelector("#tabs .on");
+    const destination = open ? (analysisTools.contains(selected) ? analysisToolsTrigger : selected) : $("dt");
+    destination.focus();
+  }
 }
 function tab(name, focus = false) {
   activePanel = name;
@@ -588,17 +595,27 @@ function showForecast() {
 document.querySelectorAll("#tabs button").forEach(button => {
   button.onclick = () => {
     if (button.dataset.t === "m") showForecast();
-    else tab(button.dataset.t);
+    else {
+      const inMenu = analysisTools.contains(button);
+      if (inMenu) analysisTools.open = false;
+      tab(button.dataset.t, inMenu);
+    }
   };
+});
+document.addEventListener("pointerdown", event => {
+  if (analysisTools.open && !analysisTools.contains(event.target)) analysisTools.open = false;
 });
 $("dt").onclick = () => {
   if (document.body.classList.contains("dc")) tab(activePanel, true);
   else drawer(false, true);
 };
 $("close-panel").onclick = () => drawer(false, true);
-$("head-forecast").onclick = showForecast;
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && !$("dx").open && !globePicker.open && !document.body.classList.contains("dc")) drawer(false, true);
+  if (event.key !== "Escape" || $("dx").open || globePicker.open || document.body.classList.contains("dc")) return;
+  if (analysisTools.open) {
+    analysisTools.open = false;
+    analysisToolsTrigger.focus();
+  } else drawer(false, true);
 });
 /* ---- Data Lab ---- */
 const pc=(a,b)=>{let n=0,sx=0,sy=0;for(let i=0;i<a.length;i++)if(Number.isFinite(a[i])&&Number.isFinite(b[i])){n++;sx+=a[i];sy+=b[i]}if(n<8)return NaN;const mx=sx/n,my=sy/n;let u=0,p=0,q=0;for(let i=0;i<a.length;i++)if(Number.isFinite(a[i])&&Number.isFinite(b[i])){const x=a[i]-mx,y=b[i]-my;u+=x*y;p+=x*x;q+=y*y}return p&&q?u/Math.sqrt(p*q):NaN};
@@ -811,6 +828,7 @@ $("pfl").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const t=a
 (async()=>{try{const r=await fetch("pyroscale_places.json");if(r.ok)setPlaces(await r.json())}catch(_){}if(!PLACES){try{const c=await idb("get",0,"p");if(c)setPlaces(JSON.parse(c))}catch(_){}}})();
 
 wireMap();
+wirePanelMovement();
 wireExport();
 attachFC(null);
 const loadJson=async path=>{
@@ -834,7 +852,7 @@ async function loadBundled() {
     if(ticket!==dataLoadSequence)return;
     $("tg").textContent="Observation record unavailable";
     $("demo-status").hidden=false;
-    $("demo-status").textContent="Observations unavailable. Use Analysis → Period and view to load a record.";
+    $("demo-status").textContent="Observations unavailable. Open Area, dates and data filters in Analysis to load a record.";
     console.warn("PyroScale could not load its observation record",error.message);
   }
 }

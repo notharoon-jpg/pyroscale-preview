@@ -84,6 +84,6 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{padding:4px 6px
 .pres li{padding:7px 10px;cursor:pointer;border-top:1px solid var(--ln)}.pres li:first-child{border-top:0}.pres li:hover{background:var(--hat)}.pres small{color:var(--mut)}
 .chips .chip{padding:4px 10px;border-radius:12px;background:var(--hat);border-color:var(--ln)}
 .ovs{width:max-content}input[type=range]{accent-color:var(--ac)}.ov .seg label,.ov button{white-space:nowrap}.ov .seg label{padding:6px 10px}
-@media(min-width:721px){body:not(.dc) .ovs{max-width:calc(100vw - 520px)}}
+@media(min-width:721px){body:not(.dc, .analysis-floating) .ovs{max-width:calc(100vw - 520px)}}
 h1{white-space:nowrap}.tag{white-space:nowrap;max-width:38vw;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:720px){.ov{padding:4px 6px;gap:8px;font-size:12px}.ov .seg label{padding:5px 8px}h1{font-size:17px}}

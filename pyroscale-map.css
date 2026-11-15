@@ -8,62 +8,6 @@
   white-space: nowrap;
 }
 
-.map-header {
-  left: 12px;
-  right: 12px;
-  top: 9px;
-  height: 48px;
-  gap: 12px;
-  padding-inline: 10px;
-  border: 1px solid #e2bca468;
-  border-radius: 7px;
-  background: var(--hd);
-  backdrop-filter: blur(14px);
-}
-.map-header .workspace-name {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex: 1;
-  color: var(--mut);
-  font: 600 14px var(--display);
-  white-space: nowrap;
-}
-.workspace-name strong { color: var(--cream); font-size: 16px; }
-.workspace-description { padding-left: 8px; border-left: 1px solid #886b71; }
-.map-header :is(button, #home) {
-  min-height: 36px;
-  padding: 5px 11px;
-  background: #312430;
-  border: 1px solid #886b71;
-  border-radius: 4px;
-  color: var(--cream);
-  font: 700 15px var(--display);
-  white-space: nowrap;
-}
-.map-header :is(button, #home):hover { border-color: var(--ac); }
-.map-header #home { display: inline-flex; align-items: center; text-decoration: none; }
-.map-header #home span { margin-right: 4px; }
-.map-header #dt {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 6px 12px;
-  color: var(--cream);
-  background: var(--red);
-  border: 1px solid #ec746d;
-  border-radius: 4px;
-}
-.map-header #dt:hover {
-  background: var(--oxblood);
-  border-color: var(--ac);
-}
-.map-header #dt[aria-expanded="true"] {
-  background: var(--cream);
-  color: var(--navy);
-  border-color: var(--cream);
-}
 .analysis-icon {
   display: block;
   width: 14px;
@@ -195,7 +139,7 @@
 #map-overview-chart:empty { display: none; }
 #map-overview-chart rect { fill: var(--ac); }
 #map-overview-chart path { stroke: var(--map-border); }
-body:not(.dc) .map-overview { display: none; }
+body:not(.dc, .analysis-floating) .map-overview { display: none; }
 .map-ui:has(.forecast-timeline:not([hidden])) .map-overview { bottom: calc(var(--map-bottom) + 68px); }
 
 .map-draw-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 7px; }
@@ -406,21 +350,16 @@ body:not(.dc) .map-overview { display: none; }
 .picker-back:hover { border-color: var(--ac); }
 
 @media (max-width: 950px) {
-  body:not(.dc) #map-region { display: none; }
+  body:not(.dc, .analysis-floating) #map-region { display: none; }
   .map-filterbar .seg label { padding-inline: 7px; }
 }
 @media (max-width: 720px) {
-  .map-header { left: 7px; right: 7px; top: 5px; height: 42px; gap: 7px; padding-inline: 6px; }
-  .map-header .workspace-description, .map-header .forecast-suffix { display: none; }
-  .workspace-name strong { font-size: 14px; }
-  .map-header .hr { margin-left: auto; gap: 5px; }
-  .map-header :is(button, #home), .map-header #dt { min-height: 32px; padding: 4px 7px; font-size: 13px; }
   .map-ui { --map-left: 8px; --map-right: 8px; --map-bottom: 23px; }
-  body:not(.dc) .map-ui { --map-right: 8px; }
+  body:not(.dc, .analysis-floating) .map-ui { --map-right: 8px; }
   .map-top { top: calc(var(--hh) + 3px); }
   .map-filterbar { flex-wrap: wrap; padding: 5px; gap: 4px; }
   .map-place-search { flex-basis: 58%; }
-  #map-region, body:not(.dc) #map-region { display: block; flex: 1 1 95px; }
+  #map-region, body:not(.dc, .analysis-floating) #map-region { display: block; flex: 1 1 95px; }
   .map-filterbar .seg { flex-basis: 100%; }
   .map-filterbar .seg label { padding: 3px 6px; }
   .map-overview {
@@ -440,12 +379,12 @@ body:not(.dc) .map-overview { display: none; }
   #legend-title { margin: -6px -8px 5px; padding: 5px 8px; font-size: 14px; }
   #lgd strong { font-size: 12px; }
   #lgd .legend-scale { height: 11px; }
-  body:not(.dc) #lgd { left: var(--map-left); right: auto; bottom: var(--map-bottom); }
+  body:not(.dc, .analysis-floating) #lgd { left: var(--map-left); right: auto; bottom: var(--map-bottom); }
   .map-ui:has(.forecast-timeline:not([hidden])) #lgd,
   .map-ui:has(.forecast-timeline:not([hidden])) .map-overview { bottom: calc(var(--map-bottom) + 111px); }
-  body:not(.dc) .map-ui:has(.forecast-timeline:not([hidden])) #lgd { bottom: calc(var(--map-bottom) + 111px); }
+  body:not(.dc, .analysis-floating) .map-ui:has(.forecast-timeline:not([hidden])) #lgd { bottom: calc(var(--map-bottom) + 111px); }
   .map-ui .map-tools { bottom: var(--map-bottom); }
-  body:not(.dc) .map-ui:not(:has(.forecast-timeline:not([hidden]))) .map-tools { bottom: var(--map-bottom); }
+  body:not(.dc, .analysis-floating) .map-ui:not(:has(.forecast-timeline:not([hidden]))) .map-tools { bottom: var(--map-bottom); }
   .map-tools #map-export, .map-tools #map-legend, .map-style-menu > summary { min-height: 29px; padding-inline: 6px; font-size: 13px; }
   .map-tools > button, .map-settings summary { width: 26px; height: 29px; font-size: 16px; }
 }

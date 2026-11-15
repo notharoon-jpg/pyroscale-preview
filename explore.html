@@ -7,9 +7,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="pyroscale-base.css">
-<link rel="stylesheet" href="pyroscale-ui.css?v=landing-refresh">
-<link rel="stylesheet" href="pyroscale-map.css?v=explore-page">
+<link rel="stylesheet" href="pyroscale-base.css?v=analysis-drawer">
+<link rel="stylesheet" href="pyroscale-ui.css?v=analysis-drawer">
+<link rel="stylesheet" href="pyroscale-map.css?v=analysis-drawer">
+<link rel="stylesheet" href="pyroscale-analysis.css?v=analysis-drawer">
 </head><body class="dc">
 <div class="pn gl"><div id="gl" role="region" aria-label="Interactive 3D globe of hotspot activity"></div>
 <div class="map-ui" id="map-ui" data-style="satellite">
@@ -94,12 +95,14 @@
         </div>
         <label class="ck"><input type="checkbox" id="ga">Auto-rotate</label>
         <label class="ck"><input type="checkbox" id="gn">Day and night</label>
+        <label class="ck"><input type="checkbox" id="map-grid">15° reference grid</label>
       </div>
     </details>
   </div>
   <section class="ov bot" id="lgd" aria-labelledby="legend-title">
     <h2 id="legend-title">Map legend</h2>
     <div id="legend-content"></div>
+    <p class="legend-grid-note">Dots represent 3° grid cells.</p>
   </section>
   <span class="demo-status" id="demo-status">Loading observations…</span>
   <div class="map-credit">
@@ -109,14 +112,8 @@
   </div>
 </div></div>
 
-<header class="map-header" id="map-header" aria-label="Globe workspace">
-  <a id="home" href="./"><span aria-hidden="true">←</span> Home</a>
-  <span class="workspace-name"><strong>PyroScale</strong><span class="workspace-description">Hotspot explorer</span></span>
-  <div class="hr">
-    <button id="head-forecast" type="button">Forecast<span class="forecast-suffix"> &amp; model</span></button>
-    <button id="dt" type="button" aria-controls="dr" aria-expanded="false"><span class="analysis-icon" aria-hidden="true"></span><span>Analysis</span></button>
-  </div>
-</header>
+<a id="home" class="globe-home" href="./"><span aria-hidden="true">←</span> Home</a>
+<button id="dt" class="analysis-tab" type="button" aria-controls="dr" aria-expanded="false"><span class="analysis-icon" aria-hidden="true"></span> Analysis</button>
 
 <dialog id="globe-picker" aria-labelledby="globe-picker-title">
   <form method="dialog">
@@ -136,30 +133,45 @@
 </dialog>
 
 <aside id="dr" aria-label="Fire activity analysis" inert>
-  <div class="panel-heading"><div><h2 id="panel-title">Area analysis</h2><p id="panel-region">Global</p></div><button id="close-panel" type="button" aria-label="Close analysis">×</button></div>
+  <div class="panel-heading">
+    <div><h2 id="panel-title">Area analysis</h2><p id="panel-region">Global</p></div>
+    <div class="panel-actions">
+      <button id="move-panel" type="button" aria-label="Move analysis panel" aria-describedby="move-panel-help">Move</button>
+      <button id="dock-panel" type="button" hidden>Dock</button>
+      <button id="close-panel" type="button" aria-label="Close analysis">×</button>
+    </div>
+    <span class="sr-only" id="move-panel-help">Drag to move the panel or use the arrow keys. Press Dock to return it to the edge.</span>
+  </div>
   <nav id="tabs" aria-label="Analysis sections">
-    <button type="button" data-t="x" class="on" aria-current="true">Explore</button>
+    <button type="button" data-t="x" class="on" aria-current="true">Overview</button>
     <button type="button" data-t="m">Forecast</button>
     <button type="button" data-t="c">Places</button>
-    <button type="button" data-t="p">Point</button>
-    <button type="button" data-t="d">Data Lab</button>
-    <button type="button" data-t="f">Scenario</button>
+    <details id="analysis-tools">
+      <summary>More tools</summary>
+      <div class="analysis-other-tabs">
+        <button type="button" data-t="p">Hotspot details</button>
+        <button type="button" data-t="d">Data Lab</button>
+        <button type="button" data-t="f">Scenario lab</button>
+      </div>
+    </details>
   </nav>
-  <div class="tp" data-t="x"><div class="wrap">
-<div>
-<div class="pn"><h2>Area of interest</h2>
+  <div class="tp overview-panel" data-t="x">
 <div class="area-shortcut">
   <button id="panel-draw" class="draw-shortcut" type="button" aria-pressed="false" aria-describedby="panel-draw-help">Draw area</button>
-  <p id="panel-draw-help">Drag a box on the globe to analyze that area, or tap the globe for a small box. Charts update when you finish.</p>
+  <p id="panel-draw-help">Drag a box on the globe to analyze that area. Tap for a small area.</p>
 </div>
+<details class="analysis-disclosure">
+<summary>Area, dates and data filters</summary>
+<div class="disclosure-body">
 <label for="pre">Region</label><select id="pre"></select>
+<details class="coordinate-fields">
+<summary>Enter coordinates</summary>
 <div class="g2">
 <div><label for="n">North latitude</label><input id="n" type="number" step="0.5"></div>
 <div><label for="s">South latitude</label><input id="s" type="number" step="0.5"></div>
 <div><label for="w">West longitude</label><input id="w" type="number" step="0.5"></div>
 <div><label for="e">East longitude</label><input id="e" type="number" step="0.5"></div></div>
-<p class="hint">You can also pick a region or type coordinates.</p></div>
-<div class="pn"><h2>Period and view</h2>
+</details>
 <div class="g2"><div><label for="f">From</label><input id="f" type="month" value="2001-01" min="2001-01" max="2026-10"></div>
 <div><label for="t">To</label><input id="t" type="month" value="2026-10" min="2001-01" max="2026-10"></div></div>
 <label for="cy">Compare year in seasonal chart</label><select id="cy" style="margin-bottom:10px"></select>
@@ -167,31 +179,45 @@
 <div class="seg"><label><input type="radio" name="dm" value="h" checked>Harmonized</label><label><input type="radio" name="dm" value="r">Raw sensor</label></div>
 <small>Calendar shows</small>
 <div class="seg"><label><input type="radio" name="cm" value="c" checked>Hotspot count</label><label><input type="radio" name="cm" value="a">Anomaly</label></div>
-<label for="ld">Load your JSON files: the data file, the forecast file, or both together</label><input id="ld" type="file" accept=".json,application/json" multiple style="margin-bottom:10px"><button class="p" id="ex">Export data</button></div>
-<div class="pn"><h2>Context layers</h2>
-<label class="ck"><input type="checkbox" id="lw">Weather and drought (ERA5)</label>
-<label class="ck"><input type="checkbox" id="lx">Wind and air quality now</label>
-<p class="hint">Off by default and fetched only when switched on. They call Open-Meteo, so they need a self-hosted copy of the page.</p></div>
-</div>
-<div>
-
-<div class="pn warn"><h2>Elevated hotspot activity</h2><p class="rks" id="rks">Loading forecast...</p>
+<label for="ld">Import observation or forecast files (JSON)</label><input id="ld" type="file" accept=".json,application/json" multiple style="margin-bottom:10px"><button class="p" id="ex">Export data</button>
+</div></details>
+<div class="kp" id="kp" aria-label="Activity at a glance"></div>
+<section class="pn analysis-calendar" aria-labelledby="ct">
+  <h2 id="ct" tabindex="-1">Hotspot calendar</h2>
+  <p class="note" id="cn"></p>
+  <div id="cal"></div>
+  <div class="lg" id="lg"></div>
+</section>
+<details class="analysis-disclosure">
+<summary>Seasonal and annual trends</summary>
+<div class="disclosure-body">
+<div class="pn"><h2>Seasonal profile</h2><p class="note" id="sn"></p><div id="sc"></div></div>
+<div class="pn"><h2>Annual totals by record</h2><p class="note">Terra is dashed gray and Suomi-NPP is solid. Only years with all 12 months are shown.</p><div id="an"></div></div>
+</div></details>
+<details class="analysis-disclosure">
+<summary>Elevated activity and anomalies</summary>
+<div class="disclosure-body">
+<div class="pn"><h2>Elevated hotspot activity</h2><p class="rks" id="rks">Loading forecast…</p>
 <div class="rctl"><label for="rs">Sensitivity<select id="rs"><option value="c">Cautious, 80th percentile</option><option value="s" selected>Standard, 90th percentile</option><option value="t">Strict, 95th percentile</option></select></label><label class="ck"><input type="checkbox" id="rkm">Only my selected area</label></div>
 <ul id="rkl"></ul>
 <p class="note" style="margin:8px 0 0">The risk layer flags cells with at least 20 projected NOAA-20 detections above a seasonal threshold. Use local fire authorities for operational alerts.</p></div>
-<div class="kp" id="kp"></div>
-<div class="pn hero"><h2 id="ct" tabindex="-1">Burning activity calendar</h2><p class="note" id="cn"></p><div id="cal"></div><div class="lg" id="lg"></div></div>
-<div class="ch">
-<div class="pn"><h2>Seasonal profile</h2><p class="note" id="sn"></p><div id="sc"></div></div>
-<div class="pn"><h2>Annual totals by record</h2><p class="note">Terra is dashed gray and Suomi-NPP is solid. Only years with all 12 months are shown.</p><div id="an"></div></div></div>
 <div class="pn"><h2>Anomaly alerts</h2><p class="note">Months in the last 12 of the selected period that reach 150% of the same calendar month’s median.</p><ul id="al" aria-live="polite"></ul></div>
+</div></details>
+<details class="analysis-disclosure">
+<summary>Weather and air quality</summary>
+<div class="disclosure-body">
+<label class="ck"><input type="checkbox" id="lw">Weather and drought (ERA5)</label>
+<label class="ck"><input type="checkbox" id="lx">Current wind and air quality</label>
+<p class="hint">Loads from Open-Meteo when enabled.</p>
 <div class="pn" id="wx" hidden><h2>Weather and drought context</h2><p class="note" id="wn"></p><div id="wc"></div><p class="note" id="wk" style="margin:8px 0 0"></p></div>
-<div class="pn" id="wd" hidden><h2>Wind and air quality</h2><p id="wdt" style="margin:0">Loading...</p></div>
-<details class="pn"><summary>Method and data notes</summary>
+<div class="pn" id="wd" hidden><h2>Wind and air quality</h2><p id="wdt" style="margin:0">Loading…</p></div>
+</div></details>
+<details class="analysis-disclosure"><summary>Method and data notes</summary><div class="disclosure-body">
 <p>This globe counts NASA FIRMS thermal-anomaly detections in monthly 3° cells. An anomaly can be a fire pixel, a gas flare or another heat source. Repeated overpasses can count the same fire more than once.</p>
 <p>Terra MODIS, Suomi-NPP VIIRS and NOAA-20 VIIRS are separate observed series. The experimental estimate places earlier Terra counts on a Suomi-NPP-like scale where the fit has support. Archive-day checks identify gaps in the record. Cloud-free coverage varies.</p>
-<p><a href="https://source.coop/portolan-mirrors/firms-catalog">FIRMS archive source</a> · <a href="pyroscale_harmonization_report.json">Harmonization validation</a> · <a href="pyroscale_forecast_report.json">Forecast validation</a></p></details>
-</div></div></div>
+<p><a href="https://source.coop/portolan-mirrors/firms-catalog">FIRMS archive source</a> · <a href="pyroscale_harmonization_report.json">Harmonization validation</a> · <a href="pyroscale_forecast_report.json">Forecast validation</a></p>
+</div></details>
+</div>
 <div class="tp" data-t="m" hidden>
   <section class="pn forecast-card">
     <h2>Monthly hotspot outlook</h2>
@@ -200,19 +226,23 @@
     <div id="forecast-key" class="forecast-key" hidden><span>Observed</span><span>Forecast</span><span>Seasonal median</span></div>
     <p class="note" id="ok"></p>
   </section>
-  <section class="pn model-card">
-    <h2>Model &amp; validation</h2>
+  <details class="analysis-disclosure model-card">
+    <summary>Model &amp; validation</summary>
+    <div class="disclosure-body">
     <div class="model-source"><span id="tf" role="status">Forecast loading…</span><span id="tg">Loading observations…</span></div>
     <p class="note" id="model-summary"></p>
     <p id="model-result" hidden></p>
     <dl class="model-skill" id="model-skill" hidden></dl>
     <p class="note" id="model-window"></p>
-  </section>
-  <section class="pn">
-    <h2>Reading the map</h2>
+    </div>
+  </details>
+  <details class="analysis-disclosure">
+    <summary>Reading the map</summary>
+    <div class="disclosure-body">
     <p class="note">Each glow represents a grid cell roughly 3° across. The map shows monthly fire activity. Individual ignition locations and fire perimeters are outside its resolution.</p>
     <p class="note">The forecast estimates NOAA-20 detections. The risk layer compares them with each cell’s NOAA-20 seasonal record.</p>
-  </section>
+    </div>
+  </details>
 </div>
 <div class="tp" data-t="c" hidden>
 <div class="pn"><h2>Countries and cities</h2>
@@ -222,19 +252,21 @@
 <div class="chips" id="pch" style="margin-top:10px"></div>
 <div class="g2"><div><label for="prr">A city includes cells within</label><select id="prr"><option value="0">the cell containing it</option><option value="100">100 km</option><option value="250" selected>250 km</option><option value="500">500 km</option></select></div><div><label>&nbsp;</label><button id="pcl">Clear selection</button></div></div>
 <p class="note" id="pnt"></p>
-<label for="pfl">City list file, from add_places.py (pyroscale_places.json)</label><input id="pfl" type="file" accept=".json,application/json"><p class="note" id="pfm" style="margin:6px 0 0"></p></div>
+<details class="coordinate-fields"><summary>Import a city list</summary>
+<label for="pfl">City list file from add_places.py</label><input id="pfl" type="file" accept=".json,application/json"><p class="note" id="pfm" style="margin:6px 0 0"></p></details></div>
 <div id="pcards"></div>
 </div>
 <div class="tp" data-t="p" hidden><div class="pn" id="ci"><p class="note" style="margin:0">Select a hotspot on the globe to see its activity and forecast.</p></div></div>
 <div class="tp" data-t="d" hidden>
-<div class="pn"><h2>Datasets</h2><p class="note">Tick as many datasets as you like. They are compared across the grid cells in your scope.</p>
+<details class="analysis-disclosure"><summary>Choose datasets</summary><div class="disclosure-body"><p class="note">Select the datasets you want to compare across grid cells in the current area.</p>
 <div class="rctl"><button id="dla">Select all</button><button id="dln">Clear</button><label class="ck"><input type="checkbox" id="dlw">Whole world, not just my area</label></div>
 <div id="dll"></div>
-<label for="dlf" style="margin-top:10px">Add your own datasets: CSV files with lat, lon and numeric columns</label><input id="dlf" type="file" accept=".csv,text/csv" multiple><p class="note" id="dlm" style="margin:6px 0 0"></p></div>
-<div class="pn"><h2>Analysis</h2><div id="dls"></div><div id="dlc"></div>
-<h2 style="margin-top:14px">Compare two datasets</h2><div class="g2"><div><label for="dx1">X axis</label><select id="dx1"></select></div><div><label for="dy1">Y axis</label><select id="dy1"></select></div></div><div id="dsc"></div>
-<h2 style="margin-top:14px">Top cells</h2><label for="dtp">Ranked by</label><select id="dtp"></select><ul id="dtl"></ul></div>
-<div class="pn"><h2>Ask the analyst</h2><p class="note" id="aim">Claude is not available here, so a built-in analyst answers from the data using rules. It can summarize, rank, correlate, and set up what-if scenarios.</p><div class="chat" id="aic"></div><div class="chips" id="aip"></div><textarea id="aiq" placeholder="Ask about the selected datasets, an area, risk, or a what-if scenario" aria-label="Question for the analyst"></textarea><div class="row"><button id="aix" hidden>Stop</button><button class="p" id="ais">Ask</button></div></div>
+<label for="dlf" style="margin-top:10px">Import CSV files with latitude, longitude and numeric columns</label><input id="dlf" type="file" accept=".csv,text/csv" multiple><p class="note" id="dlm" style="margin:6px 0 0"></p></div></details>
+<section class="pn"><h2>Dataset summary</h2><div id="dls"></div></section>
+<details class="analysis-disclosure"><summary>Correlations</summary><div class="disclosure-body" id="dlc"></div></details>
+<details class="analysis-disclosure"><summary>Compare two datasets</summary><div class="disclosure-body"><div class="g2"><div><label for="dx1">X axis</label><select id="dx1"></select></div><div><label for="dy1">Y axis</label><select id="dy1"></select></div></div><div id="dsc"></div></div></details>
+<details class="analysis-disclosure"><summary>Top cells</summary><div class="disclosure-body"><label for="dtp">Ranked by</label><select id="dtp"></select><ul id="dtl"></ul></div></details>
+<details class="analysis-disclosure"><summary>Ask the analyst</summary><div class="disclosure-body"><p class="note" id="aim">Claude is not available here, so a built-in analyst answers from the data using rules. It can summarize, rank, correlate, and set up what-if scenarios.</p><div class="chat" id="aic"></div><div class="chips" id="aip"></div><textarea id="aiq" placeholder="Ask about the selected datasets, an area, risk, or a what-if scenario" aria-label="Question for the analyst"></textarea><div class="row"><button id="aix" hidden>Stop</button><button class="p" id="ais">Ask</button></div></div></details>
 </div>
 <div class="tp" data-t="f" hidden>
 <div class="pn"><h2>Scenario lab</h2>
@@ -263,7 +295,8 @@
 <div class="row"><button id="cp">Copy</button><button id="dl">Download</button><button class="p" id="cl">Close</button></div></dialog>
 <script src="assets/vendor/three-r128/three.min.js"></script>
 <script src="assets/vendor/three-r128/OrbitControls.js"></script>
-<script src="pyroscale-globe.js?v=firms-v2"></script>
+<script src="pyroscale-globe.js?v=analysis-drawer"></script>
 <script src="pyroscale-export.js?v=firms-v2"></script>
 <script src="pyroscale-map.js?v=firms-v2"></script>
-<script src="pyroscale-explore.js?v=firms-v2"></script></body></html>
+<script src="pyroscale-panel.js"></script>
+<script src="pyroscale-explore.js?v=analysis-drawer"></script></body></html>

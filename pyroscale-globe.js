@@ -19,9 +19,9 @@ function gResize() {
   if (!G) return;
   const el = $("gl"), w = el.clientWidth, h = el.clientHeight;
   if (!w || !h) return;
-  const drawer = !document.body.classList.contains("dc");
+  const drawer = document.body.matches(":not(.dc, .analysis-floating)");
   const mobile = w <= 720;
-  const header = $("map-header").offsetHeight;
+  const homeEdge = $("home").getBoundingClientRect().bottom;
   G.renderer.setSize(w, h, false);
   G.camera.aspect = w / h;
   G.camera.fov = 45;
@@ -30,7 +30,7 @@ function gResize() {
   G.markerUniforms.pixelRatio.value = G.renderer.getPixelRatio();
   G.markerUniforms.viewportHeight.value = h;
   const x = drawer && !mobile ? $("dr").offsetWidth / 2 : 0;
-  const y = drawer && mobile ? ($("dr").offsetHeight - header) / 2 : -header / 2;
+  const y = drawer && mobile ? ($("dr").offsetHeight - homeEdge) / 2 : -homeEdge / 2;
   G.camera.setViewOffset(w, h, x, y, w, h);
 }
 
@@ -176,7 +176,7 @@ function initGlobe() {
     }));
     scene.add(starfield);
 
-    const markerUniforms = {pixelRatio: {value: 1}, viewportHeight: {value: 600}, time: {value: 0}};
+    const markerUniforms = {pixelRatio: {value: 1}, viewportHeight: {value: 600}};
     const markers = new THREE.Points(new THREE.BufferGeometry(), new THREE.ShaderMaterial({
       uniforms: markerUniforms,
       transparent: true,
@@ -184,19 +184,23 @@ function initGlobe() {
       blending: THREE.NormalBlending,
       vertexShader: `
         attribute vec3 tint;
-        attribute float strength, size, phase;
-        uniform float pixelRatio, viewportHeight, time;
+        attribute float strength, size;
+        uniform float pixelRatio, viewportHeight;
         varying vec3 color;
         varying float alpha;
         void main() {
           vec3 normal = normalize(position);
           vec3 direction = normalize(cameraPosition - position);
-          float visible = smoothstep(.025, .30, dot(normal, direction));
+          float facing = max(0., dot(normal, direction));
+          float visible = smoothstep(.025, .39, facing);
           alpha = strength * visible;
           color = tint;
           vec4 point = modelViewMatrix * vec4(position, 1.);
-          float pulse = 1. + .045 * sin(time * 1.8 + phase);
-          gl_PointSize = clamp(size * pulse * viewportHeight / -point.z, 6., 42.) * pixelRatio;
+          float pixelsPerUnit = .5 * viewportHeight * projectionMatrix[1][1] / -point.z;
+          float longitudeSpacing = sqrt(max(.06, 1. - normal.y * normal.y));
+          float cellSpacing = radians(3.) * pixelsPerUnit * longitudeSpacing * mix(.52, 1., facing);
+          float desiredSize = size * sqrt(pixelsPerUnit / 130.);
+          gl_PointSize = clamp(min(desiredSize, cellSpacing * .66), 1.3, 10.) * pixelRatio;
           gl_Position = projectionMatrix * point;
         }
       `,
@@ -205,19 +209,21 @@ function initGlobe() {
         varying float alpha;
         void main() {
           float r = length(gl_PointCoord - .5) * 2.;
-          float core = 1. - smoothstep(.36, .53, r);
-          float edge = (1. - smoothstep(.52, .72, r)) * (1. - core);
-          float glow = (1. - smoothstep(.52, 1., r)) * (1. - core - edge);
-          float opacity = core + .93 * edge + .25 * glow;
-          vec3 ink = vec3(.08, .023, .025);
-          vec3 tint = (color * (core + .25 * glow) + ink * .93 * edge) / max(opacity, .001);
-          gl_FragColor = vec4(tint, alpha * opacity);
+          float edge = 1. - smoothstep(.76, 1., r);
+          float fill = 1. - smoothstep(.61, .84, r);
+          vec3 ink = vec3(.09, .028, .029);
+          gl_FragColor = vec4(mix(ink, color, fill), alpha * edge);
         }
       `
     }));
     markers.frustumCulled = false;
     markers.renderOrder = 2;
     scene.add(markers);
+    const referenceGrid = createReferenceGrid();
+    const gridToggle = $("map-grid");
+    referenceGrid.visible = gridToggle.checked;
+    gridToggle.onchange = () => { referenceGrid.visible = gridToggle.checked; };
+    scene.add(referenceGrid);
 
     const line = new THREE.LineLoop(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({
       color: 0x84d3ff, transparent: true, opacity: .72
@@ -274,7 +280,6 @@ function initGlobe() {
       earthUniforms.sun.value.copy(sun);
       earthUniforms.daylight.value = daylight ? 1 : 0;
       earthUniforms.heat.value = st.vm === "x" && SCP.run ? SCP.heat : 0;
-      markerUniforms.time.value = reducedMotion.matches ? 0 : time / 1000;
       controls.enabled = !drawing;
       controls.update();
       renderer.render(scene, camera);
@@ -511,7 +516,7 @@ function drawMap() {
   } else if (!change) {
     upper = markerScale(tv.map((value, index) => !FOC || FOC(cells[index]) ? Math.abs(value) : 0));
   }
-  const position = [], tint = [], strength = [], size = [], phase = [];
+  const position = [], tint = [], strength = [], size = [];
   const color = new THREE.Color();
   G.tv = tv;
   G.visible = [];
@@ -528,13 +533,12 @@ function drawMap() {
     else color.set(ramp(HOTSPOT_COLORS, amount));
     position.push(point.x, point.y, point.z);
     tint.push(color.r, color.g, color.b);
-    strength.push((st.vm === "r" ? [.48, .76, .92, 1][level] : .73 + .27 * scaled) * (main ? 1 : .46));
-    size.push(st.vm === "r" ? [.029, .041, .054, .065][level] : .03 + .039 * scaled);
-    phase.push(index * 1.7);
+    strength.push((st.vm === "r" ? [.48, .76, .92, 1][level] : .46 + .54 * scaled) * (main ? 1 : .42));
+    size.push(st.vm === "r" ? [2.9, 4.5, 6.1, 7.5][level] : 2.8 + 4.3 * scaled);
     G.visible.push({index, point});
   }
   const geometry = new THREE.BufferGeometry();
-  for (const [name, data, itemSize] of [["position", position, 3], ["tint", tint, 3], ["strength", strength, 1], ["size", size, 1], ["phase", phase, 1]]) {
+  for (const [name, data, itemSize] of [["position", position, 3], ["tint", tint, 3], ["strength", strength, 1], ["size", size, 1]]) {
     geometry.setAttribute(name, new THREE.Float32BufferAttribute(data, itemSize));
   }
   G.markers.geometry.dispose();
@@ -546,6 +550,26 @@ function drawMap() {
 function markerScale(values) {
   const positive = values.filter(value => value > 0).sort((a, b) => a - b);
   return positive[Math.floor(positive.length * .95)] || 1;
+}
+
+function createReferenceGrid() {
+  const points = [];
+  const radius = EARTH_RADIUS + .0015;
+  for (let lat = -75; lat <= 75; lat += 15) {
+    for (let lon = -180; lon < 180; lon += 5) {
+      points.push(ll2v(lat, lon, radius), ll2v(lat, lon + 5, radius));
+    }
+  }
+  for (let lon = -180; lon < 180; lon += 15) {
+    for (let lat = -90; lat < 90; lat += 5) {
+      points.push(ll2v(lat, lon, radius), ll2v(lat + 5, lon, radius));
+    }
+  }
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({color: 0xb3ccda, transparent: true, opacity: .24, depthWrite: false});
+  const grid = new THREE.LineSegments(geometry, material);
+  grid.renderOrder = 1;
+  return grid;
 }
 
 function drawAreaOutline([s, n, w, east], show) {
