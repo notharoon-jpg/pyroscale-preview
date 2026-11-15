@@ -59,6 +59,13 @@ function sunDirection() {
   return ll2v(23.44 * Math.sin(2 * Math.PI * (day - 81) / 365), (12 - hours) * 15, 1);
 }
 
+function sceneRandom(seed) {
+  return () => {
+    seed = (Math.imul(1664525, seed) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+}
+
 function initGlobe() {
   const el = $("gl");
   try {
@@ -78,7 +85,7 @@ function initGlobe() {
     empty.needsUpdate = true;
     const earthUniforms = {
       day: {value: landTex()}, night: {value: empty},
-      sun: {value: new THREE.Vector3()}, daylight: {value: 0}, heat: {value: 0}, style: {value: 0}
+      sun: {value: new THREE.Vector3()}, daylight: {value: 0}, style: {value: 0}
     };
     const earth = new THREE.Mesh(new THREE.SphereGeometry(EARTH_RADIUS, 192, 128), new THREE.ShaderMaterial({
       uniforms: earthUniforms,
@@ -97,7 +104,7 @@ function initGlobe() {
       fragmentShader: `
         uniform sampler2D day, night;
         uniform vec3 sun;
-        uniform float daylight, heat, style;
+        uniform float daylight, style;
         varying vec2 texCoord;
         varying vec3 worldNormal, worldPoint;
         void main() {
@@ -111,7 +118,6 @@ function initGlobe() {
           float gray = dot(dayColor, vec3(.2126, .7152, .0722));
           dayColor = mix(dayColor, vec3(gray), .04);
           vec3 color = mix(dayColor, mix(base * .15 + cities * .95, dayColor, lit), daylight);
-          color *= mix(vec3(1.), vec3(1.13, .9, .78), max(heat, 0.) * .72);
           float limb = pow(1. - max(dot(n, view), 0.), 3.);
           color += vec3(.25, .61, .72) * limb * mix(.5, .22 + .32 * lit, daylight);
           if (style == 1.) {
@@ -163,7 +169,7 @@ function initGlobe() {
     }));
     scene.add(rim);
 
-    const stars = [], random = rng(38);
+    const stars = [], random = sceneRandom(38);
     for (let i = 0; i < 1500; i++) {
       const y = random() * 2 - 1, angle = random() * 2 * Math.PI;
       const r = 56 * Math.sqrt(1 - y * y);
@@ -273,7 +279,6 @@ function initGlobe() {
       else sun.copy(camera.position).normalize().add(lightOffset).normalize();
       earthUniforms.sun.value.copy(sun);
       earthUniforms.daylight.value = daylight ? 1 : 0;
-      earthUniforms.heat.value = st.vm === "x" && SCP.run ? SCP.heat : 0;
       markerUniforms.time.value = reducedMotion.matches ? 0 : time / 1000;
       controls.enabled = !drawing;
       controls.update();
@@ -420,7 +425,9 @@ function wireGlobeInput(canvas) {
     if (area) {
       const end = coordinates(event);
       if (end && (draft || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5)) {
-        draft = [Math.min(area[0], end[0]), Math.max(area[0], end[0]), Math.min(area[1], end[1]), Math.max(area[1], end[1])];
+        const west = Math.min(area[1], end[1]), east = Math.max(area[1], end[1]);
+        draft = [Math.min(area[0], end[0]), Math.max(area[0], end[0]), ...(
+          east-west>180 ? [east,west] : [west,east])];
         drawAreaOutline(draft, true);
       }
       return;
@@ -437,7 +444,8 @@ function wireGlobeInput(canvas) {
   };
   canvas.onpointerup = event => {
     if (area) {
-      adjustArea(draft || [area[0] - 4, area[0] + 4, area[1] - 4, area[1] + 4]);
+      const wrap = longitude => ((longitude + 540) % 360) - 180;
+      adjustArea(draft || [area[0]-4,area[0]+4,wrap(area[1]-4),wrap(area[1]+4)]);
       tab("x");
     } else if (start && st.gm !== "d" && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 5) {
       const index = pickAt(event);
@@ -545,8 +553,9 @@ function markerScale(values) {
   return positive[Math.floor(positive.length * .95)] || 1;
 }
 
-function drawAreaOutline([s, n, w, e], show) {
+function drawAreaOutline([s, n, w, east], show) {
   const outline = [];
+  const e=east<w?east+360:east;
   function edge(lat1, lon1, lat2, lon2) {
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(lat2 - lat1), Math.abs(lon2 - lon1)) / 2));
     for (let i = 0; i < steps; i++) {

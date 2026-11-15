@@ -27,7 +27,7 @@
     <div class="home-width hero-layout">
       <div class="intro">
         <h1 id="hero-title" tabindex="-1"><span>Pyro</span><span>Scale</span></h1>
-        <p>Explore a global fire record built from NASA’s MODIS and VIIRS satellite data. Draw an area or select a hotspot on the globe to compare past fire seasons, see monthly forecasts, and test what-if scenarios.</p>
+        <p>Explore NASA’s satellite hotspot detections on a global 3° grid. Draw an area to compare seasons, check the monthly outlook, or try an illustrative what-if scenario.</p>
         <div class="intro-actions">
           <a class="launch" id="launch" href="explore.html">Explore the globe <span aria-hidden="true">↗</span></a>
           <a class="intro-link" href="#mission">Read our mission <span aria-hidden="true">↓</span></a>
@@ -47,9 +47,9 @@
     <div class="home-width mission-layout">
       <div class="mission-copy">
         <p class="section-label">Our mission</p>
-        <h2 id="mission-title">Make decades of fire data comparable and useful.</h2>
-        <p class="section-lede" id="mission-statement">PyroScale helps people analyze local fire activity, compare seasons, and explore forecasts and what-if scenarios.</p>
-        <p>MODIS and VIIRS detect hotspots at different resolutions, so their raw counts don’t line up. We bring both records onto a common scale so communities can see how fire activity has changed over time.</p>
+        <h2 id="mission-title">Make decades of satellite hotspot data useful.</h2>
+        <p class="section-lede" id="mission-statement">PyroScale helps people explore regional detection patterns, compare seasons, and understand how a forecast performs.</p>
+        <p>MODIS and VIIRS see the Earth at different resolutions and times. PyroScale shows each satellite’s record and tests where their overlapping observations can support an experimental estimate for earlier years.</p>
       </div>
       <figure class="mission-image">
         <div class="sensor-images">
@@ -65,20 +65,20 @@
     <div class="home-width science-layout">
       <div>
         <h2 id="science-title">How PyroScale works</h2>
-        <p>We use NASA satellite data to build a consistent record of fire activity around the world.</p>
+        <p>We group NASA FIRMS thermal anomalies into monthly grid cells and check where the archive has gaps.</p>
       </div>
       <div class="science-details">
         <details>
           <summary>Align the satellite records</summary>
-          <p>VIIRS can detect smaller hotspots than MODIS. We group NASA FIRMS detections by month in 3° cells and use the sensors’ overlap to estimate VIIRS-equivalent counts for 2001–2011.</p>
+          <p>VIIRS can detect smaller hotspots than MODIS. We compare coincident cell-month counts from Terra and Suomi-NPP, and test the estimates on later months and unseen regions.</p>
         </details>
         <details>
           <summary>Train and test the forecast</summary>
-          <p>A LightGBM model trained on years of harmonized data estimates monthly hotspot counts 1–24 months ahead. We show uncertainty ranges and compare the model with a seasonal median on data withheld from training.</p>
+          <p>The NOAA-20 outlook compares a Poisson LightGBM model with seasonal baselines on rolling historical forecasts. Each lead uses the selected method. Cell-level ranges appear where calibration data support them.</p>
         </details>
         <details>
           <summary>Explore what-if scenarios</summary>
-          <p>Draw a region or find a place on the globe. Change warming, rainfall, ignitions, or fuel management and compare the result with a baseline that uses recent trends and the forecast where it performs well.</p>
+          <p>Change hypothetical multipliers for warming, rainfall, ignitions, or fuel management and see how those assumptions affect detection estimates in the selected cells.</p>
         </details>
       </div>
     </div>
