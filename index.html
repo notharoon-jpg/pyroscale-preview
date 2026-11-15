@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="pyroscale-base.css">
 <link rel="stylesheet" href="pyroscale-ui.css?v=landing-refresh">
-<link rel="stylesheet" href="pyroscale-home.css?v=section-reveal">
+<link rel="stylesheet" href="pyroscale-home.css?v=team-section">
 </head><body class="landing">
 <main id="landing" class="landing-screen">
   <nav class="landing-nav" aria-label="Page sections">
@@ -106,9 +106,8 @@
         <div>
           <p class="section-label">Our team</p>
           <h2 id="team-title">Phoenix Protocol</h2>
-          <p class="section-lede" id="team-intro">We’re building PyroScale for the NASA Space Apps Challenge.</p>
+          <p class="section-lede" id="team-intro">We’re building PyroScale to help communities understand how fire activity changes where they live.</p>
         </div>
-        <button type="button" class="team-edit" id="edit-team">Edit team details</button>
       </div>
       <ul id="team-members" class="team-members">
         <li><h3>Haroon Abbas Chaudhry</h3></li>
@@ -118,7 +117,6 @@
         <li><h3>Zaid Ali Sheikh</h3></li>
         <li><h3>Shahmeer Abdullah Malik</h3></li>
       </ul>
-      <p class="team-empty" id="team-empty" hidden>Team profiles will appear here.</p>
     </div>
   </section>
 
@@ -130,31 +128,6 @@
   </footer>
 </main>
 
-<dialog id="team-editor" class="team-editor" aria-labelledby="team-editor-title">
-  <form id="team-form">
-    <h2 id="team-editor-title">Edit team details</h2>
-    <p class="note">Save a draft in this browser to preview it. The shared roster appears when you reload the page. Download the team file to share your changes with the site’s maintainers.</p>
-    <label for="team-name">Team name</label>
-    <input id="team-name" maxlength="80" placeholder="Your Space Apps team name">
-    <label for="team-description">Team introduction</label>
-    <textarea id="team-description" maxlength="360" rows="3"></textarea>
-    <div id="team-fields"></div>
-    <button type="button" id="add-member">Add a team member</button>
-    <button type="button" id="reset-team" hidden>Use shared team profile</button>
-    <p class="note" id="team-status" role="status"></p>
-    <div class="row team-actions"><button type="button" id="cancel-team">Cancel</button><button type="button" id="download-team">Download team file</button><button class="p" type="submit">Save draft</button></div>
-  </form>
-</dialog>
-<template id="team-member-fields">
-  <fieldset class="member-fields">
-    <legend>Team member</legend>
-    <label>Name<input name="name" maxlength="80" required></label>
-    <label>Role or contribution<input name="role" maxlength="90"></label>
-    <label>Short bio<textarea name="bio" maxlength="260" rows="2"></textarea></label>
-    <button type="button" data-remove>Remove member</button>
-  </fieldset>
-</template>
-
 <script src="pyroscale-home.js" defer></script>
-<script src="pyroscale-team.js?v=shared-roster" defer></script>
+<script src="pyroscale-team.js?v=read-only-roster" defer></script>
 </body></html>

@@ -237,7 +237,7 @@ body.landing { overflow: auto; }
 .community-paths > div:first-child { padding-left: 0; }
 .community-paths h3 { margin: 0 0 7px; font: 600 clamp(17px, 2vw, 23px) var(--display); }
 .community-paths p { margin: 0 0 15px; max-width: 32ch; line-height: 1.65; }
-.community-paths a, .team-edit {
+.community-paths a {
   margin-top: auto;
   padding: 5px 0;
   border: 0;
@@ -248,7 +248,7 @@ body.landing { overflow: auto; }
   text-align: left;
 }
 .community-paths a { text-decoration: none; }
-.community-paths a:hover, .team-edit:hover { text-decoration: underline; text-underline-offset: 4px; }
+.community-paths a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .community-paths a span { margin-left: 3px; }
 .home-section .community-note { margin: 16px 0 0; font-size: 12px; }
 
@@ -266,14 +266,6 @@ body.landing { overflow: auto; }
 
 .team-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
 .team-heading .section-lede { margin-bottom: 0; }
-.team-edit {
-  margin-top: 7px;
-  padding: 8px 12px;
-  border: 1px solid var(--paper-line);
-  border-radius: 7px;
-  flex-shrink: 0;
-}
-.team-empty { margin: 27px 0 0; padding: 16px 0 0; border-top: 1px solid var(--paper-line); }
 .team-members {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
@@ -290,16 +282,6 @@ body.landing { overflow: auto; }
 .home-footer small { margin: 3px 0 0; color: #dfcbbc; }
 .home-footer a { color: var(--cream); font-size: 13px; text-decoration: none; }
 .home-footer a:hover { text-decoration: underline; }
-
-.team-editor { max-height: min(82dvh, 760px); padding: 20px; }
-.team-editor textarea { height: auto; margin: 0; }
-.team-editor label { margin-top: 9px; }
-.team-editor fieldset { margin: 14px 0; padding: 0 12px 12px; border: 1px solid var(--ln); border-radius: 8px; }
-.team-editor fieldset legend { color: var(--ink); padding-inline: 6px; }
-.team-editor fieldset button { margin-top: 7px; }
-.team-editor #add-member, .team-editor #reset-team { margin: 13px 5px 0 0; }
-.team-actions { flex-wrap: wrap; }
-#team-status:empty { display: none; }
 
 @media (max-width: 720px) {
   .hero-stage {
