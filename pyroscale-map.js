@@ -23,26 +23,33 @@ function mapOverview() {
   $("map-overview-title").textContent = ITEMS.length ? ITEMS.map(item => item.name).join(", ") : PRE[Number(region)][0];
   const scoped = cells.filter(cell => inb(cell, st.b));
   let period = mname(st.f) + " – " + mname(st.t);
-  let label = st.dm === "r" ? "Raw hotspot detections" : "Harmonized hotspot detections";
-  let history = S?.slice(st.f, st.t + 1).filter(Number.isFinite) || [];
-  let value = history.reduce((sum, count) => sum + count, 0);
+  let label = {v:"Suomi-NPP detections",m:"Terra detections",j:"NOAA-20 detections",
+               r:"Sensor history detections",h:"Reference detections and estimates"}[st.dm];
+  let history = S?.slice(st.f, st.t + 1) || [];
+  let value = history.some(Number.isFinite) ? finiteSum(history) : null;
+  if (history.some(v=>!Number.isFinite(v)) && value!==null) label += " · available months";
   let marker = -1;
 
   if (layer === "f" && FC) {
     const available = scoped.filter(cell => cell.f);
-    history = Array.from({length: FH}, (_, month) => available.reduce((sum, cell) => sum + cell.f[month], 0));
+    history = Array.from({length: FH}, (_, month) => sumWhenComplete(available.map(cell=>scopeWeight(cell)*cell.f[month])));
     marker = st.fk - 1;
     period = mname(FS + marker);
     value = available.length ? history[marker] : null;
-    label = "Projected hotspots";
+    label = "Projected NOAA-20 detections";
   } else if (layer === "r" && FC) {
     period = mname(FS);
     value = scoped.filter(cell => cell.rk?.l >= 2).length;
-    label = "High or extreme activity cells";
+    label = "Cells above activity threshold";
+    history = [];
+  } else if (layer === "f" || layer === "r") {
+    period = "";
+    label = "Forecast unavailable";
+    value = null;
     history = [];
   } else if (layer === "x") {
     history = [];
-    period = SCP.run ? "Projection for " + SCP.yr : "";
+    period = SCP.run ? "Illustrative scenario for " + SCP.yr : "";
     value = SCP.run ? st.fx === "b" ? SCP.Bs : SCP.Ps : null;
     label = st.fx === "b" ? "Annual baseline hotspots" : "Annual scenario hotspots";
     if (SCP.run && st.fx === "c") {
@@ -55,9 +62,10 @@ function mapOverview() {
     layer === "x" && st.fx === "c" ? sgn(value) : fmt(value);
   $("map-overview-measure").textContent = label;
   const values = history.slice(-36);
-  const ceiling = Math.max(1, ...values);
+  const ceiling = Math.max(1, ...values.filter(Number.isFinite));
   const width = 228 / (values.length || 1);
   const bars = values.map((count, index) => {
+    if (!Number.isFinite(count)) return "";
     const height = 34 * count / ceiling;
     return `<rect x="${(index * width).toFixed(2)}" y="${(38 - height).toFixed(2)}" width="${Math.max(1, width - 1).toFixed(2)}" height="${height.toFixed(2)}" opacity="${marker === -1 || marker === index ? 1 : .45}"/>`;
   }).join("");
@@ -77,7 +85,7 @@ function wireMap() {
     const selected = region.value;
     if (ITEMS.length && selected !== "0") clearFocus();
     filters.value = selected;
-    filters.onchange();
+    filters.dispatchEvent(new Event("change"));
     if (selected === "0") tab("x", true);
   };
   $("map-draw").onclick = $("panel-draw").onclick = () => setDrawMode(st.gm !== "d", true);

@@ -420,7 +420,9 @@ function wireGlobeInput(canvas) {
     if (area) {
       const end = coordinates(event);
       if (end && (draft || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5)) {
-        draft = [Math.min(area[0], end[0]), Math.max(area[0], end[0]), Math.min(area[1], end[1]), Math.max(area[1], end[1])];
+        const west = Math.min(area[1], end[1]), east = Math.max(area[1], end[1]);
+        draft = [Math.min(area[0], end[0]), Math.max(area[0], end[0]), ...(
+          east-west>180 ? [east,west] : [west,east])];
         drawAreaOutline(draft, true);
       }
       return;
@@ -437,7 +439,8 @@ function wireGlobeInput(canvas) {
   };
   canvas.onpointerup = event => {
     if (area) {
-      adjustArea(draft || [area[0] - 4, area[0] + 4, area[1] - 4, area[1] + 4]);
+      const wrap = longitude => ((longitude + 540) % 360) - 180;
+      adjustArea(draft || [area[0]-4,area[0]+4,wrap(area[1]-4),wrap(area[1]+4)]);
       tab("x");
     } else if (start && st.gm !== "d" && Math.hypot(event.clientX - start.x, event.clientY - start.y) < 5) {
       const index = pickAt(event);
@@ -545,8 +548,9 @@ function markerScale(values) {
   return positive[Math.floor(positive.length * .95)] || 1;
 }
 
-function drawAreaOutline([s, n, w, e], show) {
+function drawAreaOutline([s, n, w, east], show) {
   const outline = [];
+  const e=east<w?east+360:east;
   function edge(lat1, lon1, lat2, lon2) {
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(lat2 - lat1), Math.abs(lon2 - lon1)) / 2));
     for (let i = 0; i < steps; i++) {

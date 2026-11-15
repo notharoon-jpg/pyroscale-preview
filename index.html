@@ -48,8 +48,8 @@
       <div class="mission-copy">
         <p class="section-label">Our mission</p>
         <h2 id="mission-title">Make decades of fire data comparable and useful.</h2>
-        <p class="section-lede" id="mission-statement">PyroScale helps people analyze local fire activity, compare seasons, and explore forecasts and what-if scenarios.</p>
-        <p>MODIS and VIIRS detect hotspots at different resolutions, so their raw counts don’t line up. We bring both records onto a common scale so communities can see how fire activity has changed over time.</p>
+        <p class="section-lede" id="mission-statement">PyroScale helps people analyze regional hotspot activity, compare seasons, and explore forecasts and what-if scenarios.</p>
+        <p>MODIS and VIIRS detect hotspots at different resolutions, so their raw counts don’t line up. We compare their overlap to estimate earlier VIIRS-equivalent counts where the data support it.</p>
       </div>
       <figure class="mission-image">
         <div class="sensor-images">
@@ -65,20 +65,20 @@
     <div class="home-width science-layout">
       <div>
         <h2 id="science-title">How PyroScale works</h2>
-        <p>We use NASA satellite data to build a consistent record of fire activity around the world.</p>
+        <p>We use NASA satellite data to compare historical hotspot activity around the world.</p>
       </div>
       <div class="science-details">
         <details>
           <summary>Align the satellite records</summary>
-          <p>VIIRS can detect smaller hotspots than MODIS. We group NASA FIRMS detections by month in 3° cells and use the sensors’ overlap to estimate VIIRS-equivalent counts for 2001–2011.</p>
+          <p>VIIRS can detect smaller hotspots than MODIS. We group NASA FIRMS detections by month in 3° cells and use the sensors’ overlap to estimate VIIRS-equivalent counts for 2001–2011 where the model was fitted.</p>
         </details>
         <details>
           <summary>Train and test the forecast</summary>
-          <p>A LightGBM model trained on years of harmonized data estimates monthly hotspot counts 1–24 months ahead. We show uncertainty ranges and compare the model with a seasonal median on data withheld from training.</p>
+          <p>A seasonal median estimates NOAA-20 hotspot counts 1–24 months ahead. It beat LightGBM on held-out data, and cell-level uncertainty ranges appear where calibration data support them.</p>
         </details>
         <details>
           <summary>Explore what-if scenarios</summary>
-          <p>Draw a region or find a place on the globe. Change warming, rainfall, ignitions, or fuel management and compare the result with a baseline that uses recent trends and the forecast where it performs well.</p>
+          <p>Draw a region or find a place on the globe. Change warming, rainfall, ignitions, or fuel management and compare the result with an illustrative baseline based on observations, forecasts and seasonal trends.</p>
         </details>
       </div>
     </div>

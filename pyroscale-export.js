@@ -5,33 +5,45 @@ function exportMap() {
   const scenario = st.fx === "c" ? "scenario_change_percent" : st.fx === "b" ? "baseline_hotspots_per_month" : "scenario_hotspots_per_month";
   return cells.filter(cell => inb(cell, st.b)).flatMap(cell => {
     const location = {latitude: cell.lat, longitude: cell.lon};
-    if (layer === "f") return cell.f ? [{...location, month: forecastDate, projected_hotspots: cval(cell)}] : [];
+    if (layer === "f") {
+      const k = st.fk - 1;
+      return Number.isFinite(cell.f?.[k]) ? [{
+        ...location, month: forecastDate, projected_hotspots: cell.f[k],
+        lower_80: cell.projection.lo[k], upper_80: cell.projection.hi[k],
+        method: FC.methods[k], platform: FC.platform, dataset_id: datasetId
+      }] : [];
+    }
     if (layer === "r") return cell.rk ? [{
-      ...location, month: riskDate, projected_hotspots: cell.rk.v,
+      ...location, month: riskDate, projected_hotspots: cell.rk.v, platform: FC.platform,
       seasonal_percentile: Number((cell.rk.pr * 100).toFixed(2)), activity_level: LV[cell.rk.l]
     }] : [];
     if (layer === "x") return SCP.run && cell.sB != null ? [{
       ...location, scenario_year: SCP.yr, [scenario]: Number(cval(cell).toFixed(3))
     }] : [];
-    return [{...location, from_month: ym(st.f), through_month: ym(st.t), record: st.dm === "r" ? "raw" : "harmonized",
-      mean_monthly_hotspots: Number(cellAvg(cell).toFixed(3))}];
+    const months = observed(cell).slice(st.f, st.t + 1).filter(Number.isFinite);
+    return months.length ? [{...location, from_month: ym(st.f), through_month: ym(st.t),
+      record: st.dm === "r" ? "raw" : "harmonized", months_available: months.length,
+      mean_monthly_hotspots: Number(cellAvg(cell).toFixed(3))}] : [];
   });
 }
 
 function exportRows(dataset) {
   if (dataset === "map") return exportMap();
-  if (dataset === "grid") return cells.filter(cell => inb(cell, st.b)).map(cell => ({
-    latitude: cell.lat, longitude: cell.lon, from_month: ym(st.f), through_month: ym(st.t),
-    record: st.dm === "r" ? "raw" : "harmonized", hotspots_in_period: Math.round(cellAvg(cell) * (st.t - st.f + 1))
-  }));
+  if (dataset === "grid") return cells.filter(cell => inb(cell, st.b)).flatMap(cell => {
+    const months = observed(cell).slice(st.f, st.t + 1).filter(Number.isFinite);
+    return months.length ? [{latitude: cell.lat, longitude: cell.lon, from_month: ym(st.f),
+      through_month: ym(st.t), record: st.dm === "r" ? "raw" : "harmonized", months_available: months.length,
+      hotspots_in_period: Number(finiteSum(months).toFixed(2))}] : [];
+  });
   if (!cells.some(cell => inb(cell, st.b))) return [];
   const rows = [];
   for (let month = st.f; month <= st.t && month <= LAST; month++) {
     const baseline = med[month % 12];
     rows.push({
-      month: ym(month), hotspots_raw: A.R[month], hotspots_harmonized: A.H[month],
+      month: ym(month), hotspots_raw: finiteOrNull(A.r[month]), hotspots_harmonized: finiteOrNull(A.h[month]),
       comparison_record: st.dm === "r" ? "raw" : "harmonized",
-      seasonal_median: Math.round(baseline), anomaly_percent: baseline ? Number(((S[month] / baseline - 1) * 100).toFixed(1)) : null
+      seasonal_median: baseline || null,
+      anomaly_percent: baseline && Number.isFinite(S[month]) ? Number(((S[month] / baseline - 1) * 100).toFixed(1)) : null
     });
   }
   return rows;
@@ -62,13 +74,13 @@ function wireExport() {
     format.options[1].disabled = history;
     if (history && format.value === "geojson") format.value = "csv";
     const layer = dataset.value === "map" ? st.vm : "o";
-    let source = real ? "Satellite record" : "Demonstration data";
-    if (real && (layer === "f" || layer === "r")) source = FC.demo ? "Seasonal baseline" : "Model forecast";
+    let source = real ? "NASA FIRMS via Source Cooperative" : "Observations unavailable";
+    if (real && (layer === "f" || layer === "r")) source = FC ? "Evaluated NOAA-20 outlook" : "Forecast unavailable";
     if (real && layer === "x") source = "Illustrative scenario";
     const area = ITEMS.length ? ITEMS.map(item => item.name).join(", ") : PRE[Number($("pre").value)][0];
     const period = layer === "f" ? mname(FS + st.fk - 1) : layer === "r" ? mname(FS) :
       layer === "x" && SCP.run ? String(SCP.yr) : mname(st.f) + " – " + mname(st.t);
-    const rows = exportRows(dataset.value).map(row => ({...row, data_source: source}));
+    const rows = exportRows(dataset.value).map(row => ({...row, dataset_id: datasetId, data_source: source}));
     const name = {o: "observed", f: "forecast", r: "activity-risk", x: "scenario"}[layer];
     $("export-scope").textContent = area + " · " + period + " · " + source + " · " + rows.length.toLocaleString() + " rows";
     payload = {
