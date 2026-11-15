@@ -1,0 +1,25 @@
+name: Retrain forecast
+on:
+  schedule:
+    - cron: "0 7 2 * *"      # 2nd of each month, once the previous month is complete
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy lightgbm scikit-learn
+      - run: python forecast_pyroscale.py --data pyroscale_data.json --out pyroscale_forecast.json
+      - run: |
+          git config user.name "pyroscale-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add pyroscale_forecast.json
+          git commit -m "Retrain forecast" || exit 0
+          git pull --rebase
+          git push
