@@ -1,0 +1,4 @@
+pyroscale_data.json text eol=lf
+pyroscale_forecast.json text eol=lf
+pyroscale_forecast_report.json text eol=lf
+pyroscale_harmonization_report.json text eol=lf
